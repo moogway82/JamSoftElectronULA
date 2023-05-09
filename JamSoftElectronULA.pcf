@@ -1,0 +1,74 @@
+### Clock
+set_io 	clk_16M00   	63
+
+### Reset
+set_io 	RST_IN_n     	95
+set_io	RST_OUT_n 		96
+
+### ULA Signals
+set_io 	addr[0]     	3
+set_io 	addr[1]     	1
+set_io 	addr[2]     	7
+set_io 	addr[3]     	30
+set_io 	addr[4]     	28
+set_io 	addr[5]     	27
+set_io 	addr[6]     	26
+set_io 	addr[7]     	10
+set_io 	addr[8]     	2
+set_io 	addr[9]     	34
+set_io 	addr[10]     	33
+set_io 	addr[11]     	29
+set_io 	addr[12]     	8
+set_io 	addr[13]     	9
+set_io 	addr[14]     	4
+set_io 	addr[15]     	72
+
+set_io 	data[0]     	53
+set_io 	data[1]     	54
+set_io 	data[2]     	56
+set_io 	data[3]     	57
+set_io 	data[4]     	59
+set_io 	data[5]     	60
+set_io 	data[6]     	62
+set_io 	data[7]     	64
+set_io 	data_en_n 		74
+
+set_io	R_W_n			69
+set_io 	POR_n 			71
+set_io	IRQ_n			97
+set_io	dram_data[0]	37
+set_io	dram_data[1]	40
+set_io	dram_data[2] 	51
+set_io	dram_data[3]	52
+set_io	dram_addr[0]	93
+set_io	dram_addr[1]	91
+set_io	dram_addr[2]	21
+set_io	dram_addr[3]	12
+set_io	dram_addr[4]	20
+set_io	dram_addr[5]	19
+set_io	dram_addr[6]	18
+set_io	dram_addr[7]	16
+set_io	ras_n			79
+set_io	cas_n			80
+set_io	ram_we			94
+set_io  ram_nRW			25
+set_io	ROM_n			82
+
+set_io	red 			13
+set_io	green 			15
+set_io	blue 			89
+set_io	csync 			87
+set_io  HS_n 			90
+set_io  sound 			83
+set_io  kbd[0] 			36
+set_io  kbd[1]			65
+set_io  kbd[2]			66
+set_io  kbd[3]			68
+set_io	casIn			73
+set_io	casOut			78
+set_io	caps			85
+set_io	motor			86
+set_io	cpu_clk_out		81
+
+set_io	testing_pin		100
+
