@@ -120,6 +120,7 @@ architecture behavioral of JamSoftElectronULA is
   constant hsync_end      : std_logic_vector(10 downto 0) := std_logic_vector(to_unsigned(832, 11));
   constant h_active       : std_logic_vector(10 downto 0) := std_logic_vector(to_unsigned(640, 11));
   constant h_total        : std_logic_vector(10 downto 0) := std_logic_vector(to_unsigned(1023, 11));
+  constant h_reset_addr   : std_logic_vector(10 downto 0) := std_logic_vector(to_unsigned(1016, 11));
   signal h_count        : std_logic_vector(10 downto 0);
   signal resync_h_count : std_logic;
 
@@ -138,6 +139,13 @@ architecture behavioral of JamSoftElectronULA is
 
   signal screen_addr    : std_logic_vector(14 downto 0);
   signal screen_data    : std_logic_vector(7 downto 0);
+
+  -- DEBUGGING screen address variables
+  -- signal pixel_debug : std_logic_vector(3 downto 0);
+  -- start address of current row block (8-10 lines)
+  -- signal row_addr_debug  : std_logic_vector(14 downto 6);
+  -- address within current line
+  -- signal byte_addr_debug : std_logic_vector(14 downto 3);
 
   -- Screen Mode Registers
 
@@ -280,6 +288,22 @@ begin
     -- The external ROM is enabled:
     -- - When the address is C000-FBFF and FF00-FFFF (i.e. OS Rom)
     -- - When the address is 8000-BFFF and the ROM 10 or 11 is paged in (101x)
+
+    -- FE05: ----EPPP
+    -- E = ROM Page Enable (bit 3), also acts as the MSB for the ROM Slots below
+    -- PPP = ROM Paging Bits (bits 2,1,0)
+
+    -- ROM Slots:
+    -- 15 - Free
+    -- 14 - Free
+    -- 13 - Free
+    -- 12 - Free
+    -- 11 - BASIC (both 11 and 10 are the same)
+    -- 10 - BASIC
+    -- 9  - Keyb (both 9 and 8 are the same)
+    -- 8  - Keyb
+    -- 7-0 - Free : To access these you need to page in any 12-15 first which then allows 0-7 to be selected - I don't know why
+
     ROM_n_int <= '0' when addr(15 downto 14) = "11" and io_access = '0' else
                  '0' when addr(15 downto 14) = "10" and page_enable = '1' and page(2 downto 1) = "01" else
                  '1';
@@ -677,6 +701,8 @@ begin
 
         elsif rising_edge(clk_16M00) then
 
+          -- TODO: I think this should be moved back, maybe to 0 - the screen starts at h_count = 0 and v_count = 0, so there isn't time to load
+          -- the firt byte of the screen in the DRAM Cycle which is tied to the CPU Cycle
           if(clken_counter = x"6") then
             resync_h_count <= '0';
           end if;
@@ -737,7 +763,7 @@ begin
           -- https://www.mups.co.uk/project/hardware/acorn_electron/
 
           -- At start of the field, update row_addr and byte_addr from the ULA registers 2,3
-          if h_count = h_total and v_count = v_total then
+          if h_count = h_reset_addr and v_count = v_total then
               row_addr  := screen_base;
               byte_addr := screen_base & "000";
           end if;
@@ -929,6 +955,14 @@ begin
               rtc_intr <= '0';
           end if;
         end if;
+
+      --DEBUG:
+      -- pixel_debug <= pixel;
+      -- start address of current row block (8-10 lines)
+      -- row_addr_debug <= row_addr;
+      -- address within current line
+      -- byte_addr_debug <= byte_addr;
+
     end process;
 
     red   <= red_int;
@@ -937,6 +971,7 @@ begin
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     -- TODO: Should this be inverted?
     HS_n  <= not hsync_int;
+
 
 --------------------------------------------------------
 -- clock enable generator
@@ -1066,7 +1101,7 @@ begin
         -- TODO: Should this be an output from the DRAM FSM and not the clk_counter
         if(clken_counter(2 downto 0) = "000") then -- Just before we switch between VID or CPU/VID ram slot
           if(clken_counter(3) ='1') then -- it's just finishing VID-only slot, so is next one CPU or VID?
-            if((ram_access = '1' or io_access = '1') and contention = '0') then -- If we're on RAM/IO cycle and it's not contended
+            if(ram_access = '1' and contention = '0') then -- If we're on RAM/IO cycle and it's not contended
               cpu_ram_slot <= '1'; -- give CPU/VID slot to CPU
             else
               cpu_ram_slot <= '0'; -- give CPU/VID slot to VID (SKIPPED IN REALITY)
@@ -1293,8 +1328,14 @@ begin
     end process dramc_fsm_conc;
 
     -- DRAM Control Signal outputs
-    cas_n   <= dram_cas1_int and dram_cas2_int; -- LOW if Either CAS1 or CAS2 LOW
-    ras_n   <= dram_ras_int;
+    dram_delay_cas_ras : process(clk_16M00, dram_cas1_int, dram_cas2_int, dram_ras_int)
+    begin
+      if(falling_edge(clk_16M00)) then
+        cas_n   <= dram_cas1_int and dram_cas2_int;
+        ras_n   <= dram_ras_int;
+      end if;
+    end process dram_delay_cas_ras;
+
     ram_we  <= dram_we_int;
     ram_nRW <= not dram_we_int;
 

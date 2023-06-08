@@ -13,7 +13,8 @@ entity JamSoftElectronULA_TB2 is
     run_int_test        : boolean := false;
     run_caps_test       : boolean := false;
     run_phi_test        : boolean := false;
-    run_sync_ram_slot   : boolean := true
+    run_sync_ram_slot   : boolean := true;
+    run_paging_test     : boolean := true
   );
 end;
 
@@ -626,7 +627,224 @@ begin
     data <= (others => 'Z');
     R_W_n <= '1';
 
+    -- Read from screen addresses with corruptions
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E00"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E01"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E02"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E03"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E04"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E05"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E06"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E07"; -- RAM write, sets back to 1MHz - DRAM VID slot, out of sync
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
   end if;
+
+  if run_paging_test = true then
+    -- Page in ROM 15
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001111";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should be high
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '0' report "ROM_n shouldn't go low as ROM 15 should be paged in." severity error;
+    -- Now read a MOS address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"C001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should be low as MOS is being read." severity error;
+
+    -- Page in ROM 14
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001110";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should be high
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '0' report "ROM_n shouldn't go low as ROM 14 should be paged in." severity error;
+    -- Now read a MOS address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"C001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should be low as MOS is being read." severity error;
+
+    -- Page in ROM 13
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= x"0D";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should be high
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '0' report "ROM_n shouldn't go low as ROM 13 should be paged in." severity error;
+    -- Now read a MOS address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"C001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should be low as MOS is being read." severity error;
+
+    -- Page in ROM 12
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= x"0C";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should be high
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '0' report "ROM_n shouldn't go low as ROM 13 should be paged in." severity error;
+    -- Now read a MOS address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"C001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should be low as MOS is being read." severity error;
+
+    -- Page BASIC back in (ROM 10)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001010";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should go low as BASIC should be paged back in." severity error;
+    -- Page BASIC back in using ROM 11
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001011";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should go low as BASIC should be paged back in." severity error;
+    -- Page ROM 12 in
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001100";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should be high
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '0' report "ROM_n shouldn't go low as ROM 12 should be paged in." severity error;
+    -- Page ROM 1 in
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00000001";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should be high
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '0' report "ROM_n shouldn't go low as ROM 1 should be paged in." severity error;
+    -- Page BASIC back in
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001010";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should go LOW
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should go low as BASIC should be paged back in." severity error;
+
+    -- Try to Page ROM 7 in
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= x"07";
+    R_W_n <= '0';
+    -- Now read a BASIC address - ROM_n should go low
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"8001";
+    data <= (others => 'Z');
+    R_W_n <= '0';
+    assert ROM_n = '1' report "ROM_n should go low as BASIC should still be paged in." severity error;
+
+  end if;
+  
 
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);

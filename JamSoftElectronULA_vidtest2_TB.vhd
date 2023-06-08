@@ -224,8 +224,19 @@ begin
     data <= x"00";
     R_W_n <= '0';
 
-    wait for 22 ms;
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE07"; 
+    data <= x"A1";
+    R_W_n <= '0';
 
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"7E07"; 
+    data <= (others => 'Z');
+    R_W_n <= '1';
+
+    wait for 22 ms;
 
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);
