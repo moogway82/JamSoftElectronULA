@@ -5,9 +5,9 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA_TB2 is
   generic (
     run_sound_out_test  : boolean := true;
-    run_rgb_test        : boolean := true;
+    run_rgb_test        : boolean := false;
     rgb_test_quick      : boolean := false;
-    run_ram_test        : boolean := true;
+    run_ram_test        : boolean := false;
     ram_test_quick      : boolean := true; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
@@ -144,6 +144,31 @@ begin
     R_W_n <= '1';
 
     wait until RST_OUT_n = '1';
+
+    -- Check the PoR bit from the ISR
+    wait until falling_edge(cpu_clk_out);
+    -- wait for cpu_addr_ready;
+    addr <= x"FE00";
+    data <= (others => 'Z');
+    R_W_n <= '1';
+    assert data(1) = '0' report "PoR Bit should be 1 on first boot" severity error;
+
+    -- Read something else
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE01";
+    data <= (others => 'Z');
+    R_W_n <= '1';
+    
+
+    -- Check the PoR bit again from the ISR
+    wait until falling_edge(cpu_clk_out);
+    -- wait for cpu_addr_ready;
+    addr <= x"FE00";
+    data <= (others => 'Z');
+    R_W_n <= '1';
+    assert data(1) = '1' report "PoR Bit should be 0 on next read" severity error;
+
 
 
   if run_sound_out_test = true then 

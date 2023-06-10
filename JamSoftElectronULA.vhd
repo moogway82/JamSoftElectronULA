@@ -97,7 +97,8 @@ architecture behavioral of JamSoftElectronULA is
   signal master_irq     : std_logic;
 
   signal power_on_reset : std_logic; -- := '1';
-  signal delayed_clear_reset : std_logic; -- := '0';
+
+  signal delayed_clear_reset : std_logic_vector(3 downto 0); -- := '0';
 
   signal general_counter: std_logic_vector(15 downto 0);
   signal sound_bit      : std_logic;
@@ -351,18 +352,41 @@ begin
 
     isr_data   <= '1' & isr(6 downto 2) & power_on_reset & master_irq;
 
+    -- Split this out so PoR bit clearing to be clocked by cpu_en rising
+    -- Waiting 1 or 2 cpu_clken ticks didn't seem to Hard Reset MOS on power up
+    -- so gone to a silly number of 15 cpu_clken and it works, so leaving
+    -- it instead of trying to hunt for an optimal.
+    reset_por : process (cpu_clken, POR_n)
+    begin
+      if (POR_n = '0') then
+          -- Sets initial values using the PoR signal
+          power_on_reset <= '1';
+          delayed_clear_reset <= x"0";
 
-    int_cass_regs : process (clk_16M00, RST_IN_n, POR_n)
+      elsif rising_edge(cpu_clken) then
+
+        if (addr(15 downto 8) = x"FE") and (addr(3 downto 0) = x"0") and power_on_reset = '1' then
+          delayed_clear_reset <= x"1";
+        end if;
+
+        if not(delayed_clear_reset = x"0") then
+          if delayed_clear_reset = x"F" then
+            power_on_reset <= '0';
+          else
+            delayed_clear_reset <= std_logic_vector(unsigned(delayed_clear_reset) + 1);
+          end if;
+        end if;
+
+      end if;
+
+    end process reset_por;
+
+    int_cass_regs : process (clk_16M00, RST_IN_n, POR_n, cpu_clken)
     begin
 
         if rising_edge(clk_16M00) then
 
-            if (POR_n = '0') then
-              -- Sets initial values using the PoR signal
-              power_on_reset <= '1';
-              delayed_clear_reset <= '0';
-
-            elsif (RST_IN_n = '0') then
+            if (RST_IN_n = '0') then
 
                isr             <= (others => '0');
                ier             <= (others => '0');
@@ -538,16 +562,9 @@ begin
 
                 -- ULA Writes
                 if (cpu_clken = '1') then
-                    if delayed_clear_reset = '1' then
-                        power_on_reset <= '0';
-                    end if;
 
                     if (addr(15 downto 8) = x"FE") then
                         if (R_W_n = '1') then
-                            -- Clear the power on reset flag on the first read of the ISR (FEx0)
-                            if (addr(3 downto 0) = "0000") then
-                                delayed_clear_reset <= '1';
-                            end if;
                             -- Clear the RDFull interrupts on reading the data_shift register
                             if (addr(3 downto 0) = x"4") then
                                 isr(4) <= '0';
