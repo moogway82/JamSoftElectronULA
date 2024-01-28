@@ -105,8 +105,9 @@ begin
     wait;
   end process fill_ram;
 
-  data <= read_data when (i_n_ras = '0' and i_n_cas = '0' and i_n_we = '1') else (others => 'Z');
-  
+  -- data <= read_data when (i_n_ras = '0' and i_n_cas = '0' and i_n_we = '1') else (others => 'Z');
+  data <= read_data when (i_n_we = '1') else (others => 'Z');
+
   -- edge detection of ras and cas signals
   p_edge_detect : process (i_clk)
   begin

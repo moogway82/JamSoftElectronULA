@@ -199,8 +199,6 @@ architecture behavioral of JamSoftElectronULA is
   signal clken_counter  : std_logic_vector (3 downto 0); -- := (others => '0');
 
   signal contention     : std_logic;
-  signal contention1    : std_logic;
-  signal contention2    : std_logic;
   signal io_access      : std_logic; -- always at 1MHz, no contention
   signal ram_access     : std_logic; -- 1MHz/2MHz/Stopped
 
@@ -222,7 +220,7 @@ architecture behavioral of JamSoftElectronULA is
   signal dram_data_latch : std_logic_vector(3 downto 0);
   signal dram_data_in, dram_data_out : std_logic_vector(3 downto 0);
   signal dram_ras_int : std_logic;
-  signal dram_cas1_int : std_logic;
+  signal dram_cas1_int, dram_cas1_int_delay : std_logic;
   signal dram_cas2_int : std_logic;
   signal dram_ldcol1, dram_ldcol2, dram_ldext : std_logic; -- Latch COL1 Nibble, COL2 Nibble and time latch to Screen/CPU
   signal dram_addr_sel : std_logic_vector(1 downto 0); -- 00 LSB, 01 MSB-N1, 10 MSB-N2, 11 HiZ
@@ -230,7 +228,7 @@ architecture behavioral of JamSoftElectronULA is
   -- DRAM Controller FSM States
   type dramc_fsm_type is (RESET, ROW_LATCH, COL1_LATCH, COL1_READ, COL1_RESET, COL2_LATCH, COL2_READ, ROWCOL2_RESET, EXTLATCH_RESET);
   signal DRAMC_PS, DRAMC_NS : dramc_fsm_type;
-  --signal DRAMC_PS_DEBUG : std_logic_vector(3 downto 0);
+  --signal DRAMC_PS_DEBUG, DRAMC_NS_DEBUG : std_logic_vector(3 downto 0);
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -381,7 +379,7 @@ begin
 
     end process reset_por;
 
-    int_cass_regs : process (clk_16M00, RST_IN_n, POR_n, cpu_clken)
+    int_cass_regs : process (clk_16M00)
     begin
 
         if rising_edge(clk_16M00) then
@@ -695,6 +693,13 @@ begin
     v_total      <= std_logic_vector(to_unsigned(311, 10)) when field = '0'                else
                     std_logic_vector(to_unsigned(312, 10));
 
+    -- Indicate possible memory contention on active scan lines
+    contention   <= '0' when  h_count >= h_active else
+                    '0' when  (mode_text = '0' and v_count >= v_active_gph) else
+                    '0' when  (mode_text = '1' and v_count >= v_active_txt) else
+                    '0' when  (unsigned(char_row) >= 8) else
+                    not mode_40;
+
     -- ToDo: Shouldn't this process be sensitive to RST_n/POR_n also?
     gen_video : process (clk_16M00,RST_IN_n)
         variable pixel : std_logic_vector(3 downto 0);
@@ -704,11 +709,9 @@ begin
         variable byte_addr : std_logic_vector(14 downto 3);
     begin
         if (RST_IN_n = '0') then
-        -- TODO: Try ofsetting h_count in relation to clk_encounter
         -- H_COUNT controls the plotting of Pixels so really needs to be aligned to the DRAM VDU Cycles
         -- as soon as VDU Byte is aviailable it need to be plotted on the screen as the Pixels are
         -- immediately updated from that byte.
-        -- TODO: An attempt at Sync'ing by adding the CLKEN_COUNTER to the bottom of h_count
           resync_h_count <= '1';
           h_count <= (others => '0');
           v_count <= "0000000000";
@@ -718,9 +721,7 @@ begin
 
         elsif rising_edge(clk_16M00) then
 
-          -- TODO: I think this should be moved back, maybe to 0 - the screen starts at h_count = 0 and v_count = 0, so there isn't time to load
-          -- the firt byte of the screen in the DRAM Cycle which is tied to the CPU Cycle
-          if(clken_counter = x"6") then
+          if(clken_counter = x"7") then
             resync_h_count <= '0';
           end if;
 
@@ -825,10 +826,7 @@ begin
               red_int   <= '0';
               green_int <= '0';
               blue_int  <= '0';
-              contention <= '0';
           else
-              -- Indicate possible memory contention on active scan lines
-              contention <= not mode_40;
               -- rendering an actual pixel
               if (mode_bpp = "00") then
                   -- 1 bit per pixel, map to colours 0 and 8 for the palette lookup
@@ -1015,10 +1013,6 @@ begin
 
       elsif rising_edge(clk_16M00) then
 
-        -- Synchronize contention signal
-        contention1 <= contention;
-        contention2 <= contention1;
-
         -- clken counter
         clken_counter <= std_logic_vector(unsigned(clken_counter) + 1);
 
@@ -1037,7 +1031,7 @@ begin
         -- Stop the clock on RAM or IO accesses, in the same way the ULA does
         if clk_stopped = '0' and clken_counter(2 downto 0) = "110" and (ram_access = '1' or io_access = '1') then
             clk_stopped <= '1'; -- STOP THE CLOCK!
-        elsif clken_counter(3 downto 0) = "1110" and not (ram_access = '1' and contention2 = '1') then
+        elsif clken_counter(3 downto 0) = "1110" and not (ram_access = '1' and contention = '1') then
             clk_stopped <= '0'; -- START THE CLOCK! 
         end if;
 
@@ -1064,8 +1058,22 @@ begin
     ram_addr <= addr(14 downto 0) when cpu_ram_slot = '1' else -- CPU
                 screen_addr;  -- ULA
 
-    dram_we_int <= R_W_n when cpu_ram_slot = '1' else -- CPU Can be read or write
-                  '1'; -- ULA Screen always reads RAM
+
+    -- Latching this to make sure it's only WRITING 
+    dram_we_int_latch : process(clk_16M00, RST_IN_n)
+    begin
+      if(RST_IN_n = '0') then 
+        dram_we_int <= '1';
+      elsif(rising_edge(clk_16M00)) then
+        if clken_counter (2 downto 0) = "000" then
+          if cpu_ram_slot = '1' and ram_access = '1' and R_W_n = '0' then
+            dram_we_int <= '0';
+          else
+            dram_we_int <= '1';
+          end if;
+        end if;
+      end if;
+    end process dram_we_int_latch;
 
     dram_clk_phase <= clken_counter(2 downto 0);
 
@@ -1090,12 +1098,11 @@ begin
     dram_data_in <= dram_data;
 
     -- Reading DRAM Data into it's own Latch then data is ready
-    -- Syncronised on the Falling Edge to allow 1.5 CLK (93.75ns) from CAS Low
-    dram_data_latching : process(clk_16M00, dram_ldcol1, dram_ldcol2, RST_IN_n)
+    dram_data_latching : process(clk_16M00, dram_ldcol1, RST_IN_n)
     begin
       if(RST_IN_n = '0') then
         dram_data_latch <= (others => 'Z');
-      elsif(falling_edge(clk_16M00)) then
+      elsif(rising_edge(clk_16M00)) then
         if(dram_ldcol1 = '1') then
           dram_data_latch(0) <= dram_data_in(0);
           dram_data_latch(1) <= dram_data_in(1);
@@ -1106,29 +1113,7 @@ begin
     end process dram_data_latching;
 
     -- Register CPU RAM Slot clocked at CLK_COUNTER[3] 
-    -- I tried making this combinational, just following CLK_COUNTER[3] when 
-    -- ((ram_access = '1' or io_access = '1') and contention = '0')
-    -- But we need this to be consitent at the point clken_counter(3) = '1'
-    -- however there will be a 1 tick delay.
-    cpu_ram_slot_latch : process(clk_16M00, RST_IN_n)
-    begin
-      if(RST_IN_n = '0') then
-        cpu_ram_slot <= '0';
-      elsif(rising_edge(clk_16M00)) then
-        -- TODO: Should this be an output from the DRAM FSM and not the clk_counter
-        if(clken_counter(2 downto 0) = "000") then -- Just before we switch between VID or CPU/VID ram slot
-          if(clken_counter(3) ='1') then -- it's just finishing VID-only slot, so is next one CPU or VID?
-            if(ram_access = '1' and contention = '0') then -- If we're on RAM/IO cycle and it's not contended
-              cpu_ram_slot <= '1'; -- give CPU/VID slot to CPU
-            else
-              cpu_ram_slot <= '0'; -- give CPU/VID slot to VID (SKIPPED IN REALITY)
-            end if;
-          else
-            cpu_ram_slot <= '0'; -- It's a VID only slot
-          end if;
-        end if;
-      end if;
-    end process cpu_ram_slot_latch;
+    cpu_ram_slot <= clken_counter(3) and (not contention);
 
     -- Load the DRAM Latched data to the ram_data register for outputting to the Data bus
     load_ram_data : process(clk_16M00, RST_IN_n)
@@ -1208,7 +1193,7 @@ begin
           dram_ldcol1   <= '0';
           dram_ldcol2   <= '0';
           dram_ldext    <= '0';
-          dram_addr_sel <= "11"; -- Zero
+          dram_addr_sel <= "00"; -- LSB
           if dram_clk_phase = "000" then
             DRAMC_NS <= ROW_LATCH;
           else
@@ -1223,7 +1208,7 @@ begin
           dram_ldcol2   <= '0';
           dram_ldext    <= '0';
           dram_addr_sel <= "00"; -- LSB
-          if dram_clk_phase = "001" then
+          if dram_clk_phase = "001" then 
             DRAMC_NS <= COL1_LATCH;
           else
             DRAMC_NS <= ROW_LATCH;
@@ -1249,7 +1234,7 @@ begin
           dram_ras_int  <= '0';
           dram_cas1_int <= '0';
           dram_cas2_int <= '1';
-          dram_ldcol1   <= '1'; -- TODO: I think this might be too early, in my big hacks I moved this to the next phase - check this...
+          dram_ldcol1   <= '0'; 
           dram_ldcol2   <= '0';
           dram_ldext    <= '0';
           dram_addr_sel <= "01"; -- MSB-N1
@@ -1263,14 +1248,14 @@ begin
           dram_ras_int  <= '0';
           dram_cas1_int <= '1';
           dram_cas2_int <= '1';
-          dram_ldcol1   <= '0';
+          dram_ldcol1   <= '1';
           dram_ldcol2   <= '0';
           dram_ldext    <= '0';
-          dram_addr_sel <= "01"; -- MSB-N1
+          dram_addr_sel <= "10"; -- MSB-N2
           if dram_clk_phase = "100" then
             DRAMC_NS <= COL2_LATCH;
           else
-            DRAMC_NS <= COL1_READ;
+            DRAMC_NS <= COL1_RESET;
           end if;
 
         when COL2_LATCH => -- Phase 4
@@ -1294,8 +1279,8 @@ begin
           dram_cas1_int <= '1';
           dram_cas2_int <= '0';
           dram_ldcol1   <= '0';
-          dram_ldcol2   <= '1';
-          dram_ldext    <= '1';
+          dram_ldcol2   <= '0';
+          dram_ldext    <= '0';
           dram_addr_sel <= "10"; -- MSB-N2
           if dram_clk_phase = "110" then
             DRAMC_NS <= ROWCOL2_RESET;
@@ -1308,11 +1293,11 @@ begin
           dram_cas1_int <= '1';
           dram_cas2_int <= '1';
           dram_ldcol1   <= '0';
-          dram_ldcol2   <= '0';
-          dram_ldext    <= '0';
+          dram_ldcol2   <= '1';
+          dram_ldext    <= '1';
           dram_addr_sel <= "10"; -- MSB-N2 
-          if dram_clk_phase = "000" then
-            DRAMC_NS <= ROW_LATCH;
+          if dram_clk_phase = "111" then
+            DRAMC_NS <= EXTLATCH_RESET;
           else
             DRAMC_NS <= ROWCOL2_RESET;
           end if;
@@ -1324,7 +1309,7 @@ begin
           dram_ldcol1   <= '0';
           dram_ldcol2   <= '0';
           dram_ldext    <= '0'; 
-          dram_addr_sel <= "10"; -- MSB-N2
+          dram_addr_sel <= "00"; -- LSB
           if dram_clk_phase = "000" then
             DRAMC_NS <= ROW_LATCH;
           else
@@ -1344,14 +1329,16 @@ begin
 
     end process dramc_fsm_conc;
 
-    -- DRAM Control Signal outputs
-    dram_delay_cas_ras : process(clk_16M00, dram_cas1_int, dram_cas2_int, dram_ras_int)
+    cas1_delay : process(clk_16M00, dram_cas1_int)
     begin
-      if(falling_edge(clk_16M00)) then
-        cas_n   <= dram_cas1_int and dram_cas2_int;
-        ras_n   <= dram_ras_int;
-      end if;
-    end process dram_delay_cas_ras;
+        if(falling_edge(clk_16M00)) then
+            dram_cas1_int_delay <= dram_cas1_int;
+        end if;
+    end process cas1_delay;
+
+    cas_n   <=  dram_cas1_int_delay when DRAMC_PS = COL1_LATCH else
+                dram_cas1_int and dram_cas2_int;
+    ras_n   <= dram_ras_int;
 
     ram_we  <= dram_we_int;
     ram_nRW <= not dram_we_int;
@@ -1371,6 +1358,17 @@ begin
     --                        "1111" when EXTLATCH_RESET,
     --                        "1000" when others;
 
+    --with DRAMC_NS select
+    --    DRAMC_NS_DEBUG <=   "0000" when RESET,
+    --                        "0001" when ROW_LATCH,
+    --                        "0010" when COL1_LATCH,
+    --                        "0011" when COL1_READ,
+    --                        "0100" when COL1_RESET,
+    --                        "0101" when COL2_LATCH,
+    --                        "0110" when COL2_READ,
+    --                        "0111" when ROWCOL2_RESET,
+    --                        "1111" when EXTLATCH_RESET,
+    --                        "1000" when others;
   
 
 end behavioral;

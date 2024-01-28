@@ -4,10 +4,10 @@ use ieee.numeric_std.all;
 
 entity JamSoftElectronULA_TB2 is
   generic (
-    run_sound_out_test  : boolean := true;
-    run_rgb_test        : boolean := false;
+    run_sound_out_test  : boolean := false;
+    run_rgb_test        : boolean := true;
     rgb_test_quick      : boolean := false;
-    run_ram_test        : boolean := false;
+    run_ram_test        : boolean := true;
     ram_test_quick      : boolean := true; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
