@@ -88,6 +88,7 @@ architecture behavioral of JamSoftElectronULA is
 
   -- ram_data holds the RAM data to put out on data_out...
   signal ram_data       : std_logic_vector(7 downto 0);
+  signal block_ram_data : std_logic_vector(7 downto 0);
   signal ram_addr       : std_logic_vector(14 downto 0);
   -- Internal Data bus
   signal data_en        : std_logic;
@@ -172,6 +173,9 @@ architecture behavioral of JamSoftElectronULA is
   signal rtc_intr1      : std_logic;
   signal rtc_intr2      : std_logic;
 
+  signal ctrl_caps      : std_logic;
+  signal turbo          : std_logic;
+
   signal field          : std_logic;
 
   signal caps_int       : std_logic;
@@ -201,6 +205,8 @@ architecture behavioral of JamSoftElectronULA is
   signal contention     : std_logic;
   signal io_access      : std_logic; -- always at 1MHz, no contention
   signal ram_access     : std_logic; -- 1MHz/2MHz/Stopped
+  signal turbo_ram_access     : std_logic; -- 1MHz/2MHz/Stopped
+  signal turbo_we       : std_logic;
 
   signal kbd_access     : std_logic;
 
@@ -208,6 +214,7 @@ architecture behavioral of JamSoftElectronULA is
 
   signal cpu_clken      : std_logic;
   signal cpu_clk        : std_logic; -- := '1';
+  signal not_cpu_clk    : std_logic;
   signal clk_counter    : std_logic_vector(2 downto 0); -- := (others => '0');
   signal por_cpu_rst_counter : std_logic_vector (7 downto 0); -- Counter to reset the CPU after power on
 
@@ -247,6 +254,23 @@ begin
 end;
 
 begin
+
+    -- Turbo_RAM write enable 
+    turbo_we <= not R_W_n when addr(15 downto 12) = x"1" or addr(15 downto 12) = x"0"  else --Inverted '1' for write, '0' for Read
+                '0'; -- Otherwise Read
+
+    not_cpu_clk <= not cpu_clk;
+
+    -- Turbo RAM using 8K Block RAM on FPGA
+    ula : entity work.turbo_ram 
+    port map(
+        addr => addr(12 downto 0),
+        write_en => turbo_we,
+        wclk => not_cpu_clk,
+        rclk => cpu_clk,
+        din => data_in,
+        dout => block_ram_data
+    );
 
     -- TESTING PIN - This will change depending on what I need to check
     testing_pin <= '0';
@@ -310,7 +334,8 @@ begin
     ROM_n <= ROM_n_int;
 
     -- ULA Reads + RAM Reads + KBD Reads
-    data_out <= ram_data                  when addr(15) = '0' else
+    data_out <= ram_data                  when ram_access = '1' else
+                block_ram_data            when turbo_ram_access = '1' else
                 "0000" & (kbd xor "1111") when kbd_access = '1' else
                 isr_data                  when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"0" else
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
@@ -400,6 +425,8 @@ begin
                sound_bit       <= '0';
                cindat          <= '0';
                cintone         <= '0';
+               ctrl_caps       <= '0';
+               turbo           <= '0';
 
             else
  
@@ -560,6 +587,19 @@ begin
 
                 -- ULA Writes
                 if (cpu_clken = '1') then
+
+                    ---- Detect control+caps
+                    if (addr = x"9fff" and page_enable = '1' and page(2 downto 1) = "00") then
+                        if (kbd(2 downto 1) = "00") then
+                            ctrl_caps <= '1';
+                        else
+                            ctrl_caps <= '0';
+                        end if;
+                    end if;
+                    -- Detect "2" being pressed: Turbo Speed
+                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') then
+                        turbo <= '1';
+                    end if;
 
                     if (addr(15 downto 8) = x"FE") then
                         if (R_W_n = '1') then
@@ -1000,7 +1040,13 @@ begin
     io_access <= '1' when addr(15 downto 8) = x"FC" or addr(15 downto 8) = x"FD" or addr(15 downto 8) = x"FE" or kbd_access = '1' else '0';
 
     -- RAM accesses always happen at 1MHz (with contention)
-    ram_access <= not addr(15);
+    ram_access <= '1' when addr(15) = '0' and turbo_ram_access = '0' else 
+                  '0';
+
+    -- Use Block RAM to serve CPU
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
+                        '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
+                        '0';
 
     clk_gen1 : process(clk_16M00, POR_n)
     begin

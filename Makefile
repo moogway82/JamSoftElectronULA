@@ -6,6 +6,8 @@ all: $(SOURCES) $(IMAGES)
 GHDL: $(SOURCES)
 	~/opt/oss-cad-suite/bin/ghdl -a tm4164ea4_64k_w4.vhd
 	~/opt/oss-cad-suite/bin/ghdl -e TM4164EA3_64k_W4
+	~/opt/oss-cad-suite/bin/ghdl -a turbo_ram.vhd
+	~/opt/oss-cad-suite/bin/ghdl -e turbo_ram
 	~/opt/oss-cad-suite/bin/ghdl -a JamSoftElectronULA.vhd
 	~/opt/oss-cad-suite/bin/ghdl -e JamSoftElectronULA
 
