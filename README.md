@@ -7,6 +7,7 @@ A project to replace the original Acorn Electron ULA with a ice40 based FPGA boa
 This is a no-frills* ULA replacement meaning that it just replicates the stock Acorn Electron ULA without adding new features. It requires the standard Electron DRAM, ROM and CPU and other components to be present and working as a normal ULA would.
 
 Features:
+
 - Keyboard controls: CAPS LED, Break, Ctrl+Break & Shift Break as you'd expect
 - Tape interface: loading, saving and remote motor control works great using standard cables
 - RGB output using RGBtoHDMI adapter works great
@@ -16,6 +17,7 @@ Features:
 - Usual Electron-y things!
 
 Examples of various games known to work:
+
 - Firetrack
 - Sphere of Desiny
 - Chuckie Egg
@@ -34,15 +36,18 @@ Examples of various games known to work:
 - ...and many more...
 
 Peripherals Tested and working:
+
 - ElkSD
 - First Byte Joystick Interface Clone (my [Least Bit Joystick Interface](https://github.com/moogway82/TheLeastBitJoystickInterface))
 
 Missing features:
+
 - NMI signal is ignored at present, so the Elk will likely crash with any peripheral that tries to use it (this functionality could be added to VHDL code if required, the signal is connected to the FPGA)
 
 ## Development, Testing and Current State
 
 The bulk of development and testing has been done on 2 boards with the following specifications:
+
 - A repaired Issue 6 board with a Rockwell R6502 and 4x Samsung KM4164B-15 DRAM chips. Tested with and without IC18 to buffer/unbuffer the 16MHz clock, PHI0 and NMI signals.
 - An Issue 4 board with a UMC UM6502 and 4x TI TMS4164-15 DRAM chips.
 - A repaired Issue 6 Electon PSU Board, powered from a non-original 12V AC Adapter
@@ -50,6 +55,7 @@ The bulk of development and testing has been done on 2 boards with the following
 The JamSoftElectronULA is being provided as-is, with no guarantees. I've had a lot of issues come and go with reliability during the course of development and testing but I think it's in a good-enough state now to get out there and not be just sitting on my workbench.
 
 I think a lot of the reliability issues I've had boil down to:
+
 - Questionable state of my Electron boards. My issue 6 came without ULA (can you guess the reason for this project? :) ) and needed a lot of repair work and the Issue 4 was also from salvage.
 - Bad ULA socket - I think I damaged some of the pin sockets on the boards with an original ULA that still had some solder left on it's pins. Re-seating the JamSoftElectronULA, testing and bending pins has been required to make more reliable connections.
 - Iffy PSU. The power supply I'm using has had repairs and is running off a 12V AC adapter instead of the 19V AC of the original Elk. I also think my FPGA board may be more sensitive to power issues that the original Acorn ULA.
@@ -63,6 +69,7 @@ I've also sunk about as much time and money into this project as I wish to at pr
 The 1 'frill' with the current version is a simple Turbo mode which can be enabled using the key combo Ctrl + Caps + 2. The turbo mode uses the 8KB of embeded Block RAM on the FPGA as fast, 2MHz CPU clock & un-contended RAM which replaces the lower 8K of memory from the slower DRAM and provides a decent speed boost, especially in Modes 0-4 where the CPU is usually halted when trying to access RAM duing an active scanline. Normal speed is resumed as soon as a Break is issued. This almost gets the Elk up to BBC B speeds on the ClockSp benchmark. Many thanks to the [Ramtop-Retro's OSTC project](https://github.com/ramtop-retro/ostc) for providing the inspiration here.
 
 Ideas for future 'Frills' could be:
+
 - Add MMFS and connect an SD-Card to the FPGA programming pins
 - Connect a NES joypad to the Programming pins
 - Mode 7 support
@@ -82,11 +89,13 @@ The BOM has order numbers for either LCSC or JLCPCB to keep the costs to a minim
 Fabrication Files:
 
 ### TOP PCB:
+
 - [Gerbers](Hardware/TOP%20Board/Gerber_PCB_JamSoftElectronULA_TOP.zip)
 - [BOM](Hardware/TOP%20Board/BOM_JamSoftElectronULA_TOP.csv)
 - [Pick & Place](Hardware/TOP%20Board/PickAndPlace_PCB_JamSoftElectronULA_TOP.csv)
 
 ### BOTTOM PCB:
+
 - [Gerbers](Hardware/BOTTOM%20Board/Gerber_PCB_JamSoftElectronULA_BOT.zip)
 - [BOM](Hardware/BOTTOM%20Board/BOM_JamSoftElectronULA_TOP.csv)
 - [Pick & Place](Hardware/BOTTOM%20Board/PickAndPlace_PCB_JamSoftElectronULA_TOP.csv)
@@ -94,6 +103,7 @@ Fabrication Files:
 ## Assembly tips
 
 Helpful Files:
+
 - [Full Schematics](Hardware/Schematic_JamSoftElectronULA.pdf)
 - [Interactive BOM Map](Hardware/ibom.html)
 - [TOP PCB upperside image](Hardware/TOP%20Board/PCB_JamSoftElectronULA_TOP_under.pdf)
@@ -133,7 +143,7 @@ make
 
 ## Programming the FPGA
 
-On Linux:
+### On Linux:
 
 There is a pre-build binary configuration file in the HDL folder [JamSoftElectronULA_config_medium.bin](HDL/JamSoftElectronULA_config_medium.bin), but the iceprog tool will still be required to program it to the configuation ROM using the Makefile.
 
@@ -171,11 +181,47 @@ make test
 ```
 And the resulting .vcd file can be analysed using gtkwave, also provided in the OSS CAD Suite Build project.
 
-On Mac OS X:
+### On a Raspberry Pi:
 
-I used to use Mac OS X for development so the above should work there too, but I've not tested things here for a while on that platform.
+If you don't have the FT232H or FT2232H boards, you can use a Raspberry Pi.
 
-On Windows:
+With Raspbian OS installed, this repo and an internet connection, enable the SPI port on the Pi by running:
+```
+sudo raspi-config 
+```
+And select "P4 SPI" under the "Interfacing" options.
+
+Install Flashrom tool:
+```
+sudo apt install git libpci-dev libusb-1.0-0 libusb-dev
+git clone https://github.com/flashrom/flashrom.git
+cd flashrom
+make
+sudo make install
+```
+
+Then connect the board with the following cabling:
+
+| Raspberry Pi 1 | JamSoftElectronULA |
+| -------------- | ------------------ |
+| 1 3v3          | 6 3v3              |
+| 6 GND          | 8 GND              |
+| 11 GPIO 17     | 4 CRESET           |
+| 19 MOSI        | 7 COPI             |
+| 21 MISO        | 5 CIPO             |
+| 23 SCLK        | 3 SPICLK           |
+| 24 SPI0 CE0    | 1 CS               |
+
+And then run:
+```
+make progpi
+```
+
+### On Mac OS X:
+
+I used to use Mac OS X for development so the Linux instructions should work there too, but I've not tested things on that platform for a while now...
+
+### On Windows:
 
 Sorry I can't help for Windows as I'm unsure of the state of any of these tools in that environment, sorry...
 
