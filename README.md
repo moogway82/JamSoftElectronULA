@@ -10,11 +10,11 @@ Features:
 
 - Keyboard controls: CAPS LED, Break, Ctrl+Break & Shift Break as you'd expect
 - Tape interface: loading, saving and remote motor control works great using standard cables
-- RGB output using RGBtoHDMI adapter works great
+- RGB output (I use a RGBtoHDMI connected to it and it works great)
 - Composite Out (Mono and colour with jumper)
 - RF Out seems fine too
 - DRAM Controller - uses the normal 4164 DRAM chips
-- Usual Electron-y things!
+- All the usual Electron-y things!
 
 Examples of various games known to work:
 
@@ -46,7 +46,7 @@ Missing features:
 
 ## Development, Testing and Current State
 
-The bulk of development and testing has been done on 2 boards with the following specifications:
+The bulk of development and testing has been done on 2 Electrons with the following specifications:
 
 - A repaired Issue 6 board with a Rockwell R6502 and 4x Samsung KM4164B-15 DRAM chips. Tested with and without IC18 to buffer/unbuffer the 16MHz clock, PHI0 and NMI signals.
 - An Issue 4 board with a UMC UM6502 and 4x TI TMS4164-15 DRAM chips.
@@ -97,8 +97,8 @@ Fabrication Files:
 ### BOTTOM PCB:
 
 - [Gerbers](Hardware/BOTTOM%20Board/Gerber_PCB_JamSoftElectronULA_BOT.zip)
-- [BOM](Hardware/BOTTOM%20Board/BOM_JamSoftElectronULA_TOP.csv)
-- [Pick & Place](Hardware/BOTTOM%20Board/PickAndPlace_PCB_JamSoftElectronULA_TOP.csv)
+- [BOM](Hardware/BOTTOM%20Board/BOM_JamSoftElectronULA_BOT.csv)
+- [Pick & Place](Hardware/BOTTOM%20Board/PickAndPlace_PCB_JamSoftElectronULA_BOT.csv)
 
 ## Assembly tips
 
@@ -124,7 +124,7 @@ Be careful when joining the two boards to ensure that components on the facing s
 
 ## Building
 
-On Linux:
+### On Linux:
 
 Download the FPGA toolchain as provided in the releases by [YoSysHQ OSS-CAD-Suite-build project](https://github.com/YosysHQ/oss-cad-suite-build) unzip it to the directory of your choice (I use '~/opt/oss-cad-suite').
 
@@ -133,7 +133,7 @@ Edit the path in the Make file to where the 'oss-cad-suite' bin folder is:
 ```
 OSSCADBINPATH=~/opt/oss-cad-suite/bin
 ```
-Other common *NIX tools used by the Makefile are: head, printf & tail
+Other common \*NIX tools used by the Makefile are: head, printf, dd, cp & tail
 
 The just run the Makefile.
 
@@ -145,9 +145,9 @@ make
 
 ### On Linux:
 
-There is a pre-build binary configuration file in the HDL folder [JamSoftElectronULA_config_medium.bin](HDL/JamSoftElectronULA_config_medium.bin), but the iceprog tool will still be required to program it to the configuation ROM using the Makefile.
+There is a pre-build binary configuration file in the 'Software' folder [JamSoftElectronULA_config_medium.bin](Software/JamSoftElectronULA_config_medium.bin), but the iceprog tool will still be required to program it to the configuation ROM using the Makefile.
 
-Programming the firmware can be done using a [cheap FT232H board](https://www.aliexpress.com/item/32817060303.html) (FT2232H boards can be used to also). With the JamSoftElectronULA board out of the Electron socket, connect the programming pins as shown:
+Programming the firmware can be done using a [cheap FT232H board](https://www.aliexpress.com/item/32817060303.html) or FT2232H boards. A Raspberry Pi can also be used, see below. With the JamSoftElectronULA board out of the Electron socket, connect the programming pins as shown:
 
 | JamSoftElectronULA J1 pin | FT232H pin     | 
 | ------------------------- | -------------- |
@@ -185,7 +185,7 @@ And the resulting .vcd file can be analysed using gtkwave, also provided in the 
 
 If you don't have the FT232H or FT2232H boards, you can use a Raspberry Pi.
 
-With Raspbian OS installed, this repo and an internet connection, enable the SPI port on the Pi by running:
+With Raspbian OS installed, this repo in a folder and the board connected to the internet, enable the SPI port on the Pi by running:
 ```
 sudo raspi-config 
 ```
@@ -216,6 +216,8 @@ And then run:
 ```
 make progpi
 ```
+
+See the 'progpi:' section of the [Makefile](Software/Makefile) for the commands that are run to do the programming if you want to do that with just the bitstream file manually.
 
 ### On Mac OS X:
 
@@ -273,6 +275,6 @@ Big thanks to the following people for their support, inspiration and feedback:
 
 # Lisence
 
-The HDL source code, all files under 'HDL' folder and sub-folders, is derived from [Dave Banks, hoglet ElectronFpga project](https://github.com/hoglet67/ElectronFpga) licenced under GPL v3. 
+The VHDL source code, all files under 'Software' folder and sub-folders, is derived from [Dave Banks, hoglet ElectronFpga project](https://github.com/hoglet67/ElectronFpga) licenced under GPL v3. 
 
 Board design, all files under 'Hardware' folder and sub-folders, is derived from [Tube Time, schlae Graphics Gremlin project](https://github.com/schlae/graphics-gremlin) and licenced under a [Creative Commons Attribution-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-sa/4.0/). 
