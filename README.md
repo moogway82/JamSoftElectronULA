@@ -291,7 +291,7 @@ Big thanks to the following people for their support, inspiration and feedback:
 - Libi, my amazing partner for putting up with me mucking about on old computers
 
 
-# Lisence
+# Licence
 
 The VHDL source code, all files under 'Software' folder and sub-folders, is derived from [Dave Banks, hoglet ElectronFpga project](https://github.com/hoglet67/ElectronFpga) licenced under GPL v3. 
 
