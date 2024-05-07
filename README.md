@@ -106,7 +106,7 @@ Helpful Files:
 
 - [Full Schematics](Hardware/Schematic_JamSoftElectronULA.pdf)
 - Interactive BOM Maps: [TOP](Hardware/TOP%20Board/ibom.html), [BOTTOM](Hardware/BOTTOM%20Board/ibom.html)
-- [TOP PCB upperside image](Hardware/TOP%20Board/PCB_JamSoftElectronULA_TOP_under.pdf)
+- [TOP PCB upperside image](Hardware/TOP%20Board/PCB_JamSoftElectronULA_TOP_above.pdf)
 - [TOP PCB underside image](Hardware/TOP%20Board/PCB_JamSoftElectronULA_TOP_under.pdf)
 - [BOTTOM PCB upperside image](Hardware/BOTTOM%20Board/PCB_JamSoftElectronULA_BOT_above.pdf)
 - [BOTTOM PCB underside image](Hardware/BOTTOM%20Board/PCB_JamSoftElectronULA_BOT_under.pdf)
