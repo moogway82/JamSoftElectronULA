@@ -105,7 +105,7 @@ Fabrication Files:
 Helpful Files:
 
 - [Full Schematics](Hardware/Schematic_JamSoftElectronULA.pdf)
-- [Interactive BOM Map](Hardware/ibom.html)
+- Interactive BOM Maps: [TOP](Hardware/TOP%20Board/ibom.html), [BOTTOM](Hardware/BOTTOM%20Board/ibom.html)
 - [TOP PCB upperside image](Hardware/TOP%20Board/PCB_JamSoftElectronULA_TOP_under.pdf)
 - [TOP PCB underside image](Hardware/TOP%20Board/PCB_JamSoftElectronULA_TOP_under.pdf)
 - [BOTTOM PCB upperside image](Hardware/BOTTOM%20Board/PCB_JamSoftElectronULA_BOT_above.pdf)
@@ -116,9 +116,27 @@ I'd recommend having JCLPCB assemble all the passives on the top board as these 
 
 Take your time soldering the FPGA and Level Shifters - use plenty of good flux. I test all adjacent pins for shorts, it can be very hard to spot some bridges. And, I prod each pin under the microscope to see if any move and need to be reflowed. I spent a couple of months troubleshooting my first prototype board only to find that the problems were caused by some very bad soldering and loads of poorly connected pins!
 
-Make sure to check the soldering on the underside of the TOP board and the top-side of the BOTTOM board before sandwiching them with header pins as it will be hard to fix these afterwards. I always like to check resistance and continuity on the power lines (5V, 3.3V and 1.2V) and GND before commiting. You'll get a quick 'beep' on continuity mode until the capacitors charge, but it should not be maintained otherwise there is a short somewhere.
+### Things to check before you 'sandwich' boards
 
-Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges or shorts. I think a 2.5mm-3mm gap, the standard insulation hight on header pins, is enough clearance, but do double check. Also, the socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
+As it would be a massive pain to desolder the header pins that hold the two boards together, here's a few things to test for before you commit.
+
+#### Upper-side of the BOTTOM board:
+
+- All the resisters are pull-ups here, so using multimeter in resistance mode, put one probe on 5V pad (red below) and the other on::
+  - Green pad for R16, R17, R18, R19: should be about 4.7kΩ
+  - Blue pad for R2: should be ~10kΩ
+
+![Pads to check on bottom board](Photos/JamSoftElectronULA-test-points-BOTTOM.jpg "Pads to check on bottom board")
+
+- If they are reading inifinity ("OL") then try reflowing as one side is not connected (probably the 5V side as it's harder to heat). If it's showing ~0 then it's a short, check for solder bridges on the resistor.
+- In continuity mode, put probes on either side of DCD-5V. You may get a short beep as the capacitor charges, but it should not be continuous, if it's continuous then there is a short, best double check for bridges.
+
+#### Under-side of TOP board:
+
+- There are a lot of passives to check here so I usually just start by checking some of the 1V2, 3V3 and 5V bypass caps to test those rails for shorts. Like the 5V on the BOTTOM board, put multimeter in continuity and you should get a short beep touching both sides of a bypass cap. If you get a continuous beep, you need to look for solder bridges on any of the components on that power rail.
+- If I've soldered them all myself (not recommended!) then I will test all of the components are properly attached by using continuity mode and touching one side of the passive and following a trace to something it's supposed to be connected, then do the other side. 
+- If JLCPCB/PCBWay have done assembly here, I usually just give it a good visual inspection after testing the power rails.
+- Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges. I think a 2.5mm-3mm gap, the standard insulation hight on header pins, is enough clearance, but do double check by holding it up to the light. Also, the tops of socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
 
 # Building Firmware and Programming
 
