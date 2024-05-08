@@ -122,9 +122,10 @@ As it would be a massive pain to desolder the header pins that hold the two boar
 
 #### Upper-side of the BOTTOM board:
 
-- All the resisters are pull-ups here, so using multimeter in resistance mode, put one probe on 5V pad (red below) and the other on::
-  - Green pad for R16, R17, R18, R19: should be about 4.7kΩ
-  - Blue pad for R2: should be ~10kΩ
+- All the resisters are pull-ups here, so using multimeter in resistance mode, put one probe on 5V 'pad, coloured red below, and the other one:
+
+  - Green pads for R16, R17, R18, R19: should each be about 4.7kΩ
+  - Blue pad for R2: should be about 10kΩ
 
 ![Pads to check on bottom board](Photos/JamSoftElectronULA-test-points-BOTTOM.jpg "Pads to check on bottom board")
 
@@ -134,9 +135,14 @@ As it would be a massive pain to desolder the header pins that hold the two boar
 #### Under-side of TOP board:
 
 - There are a lot of passives to check here so I usually just start by checking some of the 1V2, 3V3 and 5V bypass caps to test those rails for shorts. Like the 5V on the BOTTOM board, put multimeter in continuity and you should get a short beep touching both sides of a bypass cap. If you get a continuous beep, you need to look for solder bridges on any of the components on that power rail.
-- If I've soldered them all myself (not recommended!) then I will test all of the components are properly attached by using continuity mode and touching one side of the passive and following a trace to something it's supposed to be connected, then do the other side. 
-- If JLCPCB/PCBWay have done assembly here, I usually just give it a good visual inspection after testing the power rails.
-- Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges. I think a 2.5mm-3mm gap, the standard insulation hight on header pins, is enough clearance, but do double check by holding it up to the light. Also, the tops of socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
+- If I've soldered them all myself (not recommended!) then I will test all of the passive components by:
+
+  - Are properly attached to their pads by using continuity mode and touching one side of the passive and following a trace to something it's supposed to be connected to, then checking the other side in the same way
+  - Still in continuity, touching each side of the component and checking that it's not shorted - caps may beep when charging but as before, should not be continuous.
+
+- If JLCPCB/PCBWay have done the assembly here, I usually just give it a good visual inspection after testing the power rails.
+
+Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges. I think a 2.5mm-3mm gap, the standard insulation hight on header pins, is enough clearance, but do double check by holding it up to the light. Also, the tops of socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
 
 # Building Firmware and Programming
 
@@ -163,7 +169,7 @@ make
 
 ### On Linux:
 
-There is a pre-build binary configuration file in the 'Software' folder [JamSoftElectronULA_config_medium.bin](Software/JamSoftElectronULA_config_medium.bin), but the iceprog tool will still be required to program it to the configuation ROM using the Makefile.
+There is a pre-build binary configuration file in the 'Software' folder [JamSoftElectronULA_config_medium.bin](Software/JamSoftElectronULA_config_medium.bin), but the iceprog tool (from [YoSysHQ OSS-CAD-Suite-build project](https://github.com/YosysHQ/oss-cad-suite-build)) will still be required to program it to the configuation ROM using the Makefile.
 
 Programming the firmware can be done using a [cheap FT232H board](https://www.aliexpress.com/item/32817060303.html) or FT2232H boards. A Raspberry Pi can also be used, see below. With the JamSoftElectronULA board out of the Electron socket, connect the programming pins as shown:
 
@@ -188,6 +194,8 @@ And then run:
 ```
 make prog
 ```
+
+Take a look at the 'prog:' section in the [Makefile](Software/Makefile) to see the iceprog command being run to program it if you don't want to use make.
 
 It should upload and verify and you're good to pop it in the Electron.
 
@@ -265,7 +273,7 @@ Here are some things you can check for:
 
 - Sometimes the Elk doesn't come up correctly on power-up first time, try using Ctrl + Break or it off and on again
 - You did plug in the Speaker and Video cables and check the monitor/TV was tuned and working, right? :)
-- Check voltages on the board using a multimeter - are you seeing a nice 5V, 3.3V and 1.2V on the board when powered up?
+- Check voltages on the board using a multimeter - are you seeing a nice 5V, 3.3V and 1.2V on the board when powered up? Voltages can be easily checked on the pins of the Voltage Regulators - see the [Schematics](Hardware/Schematic_JamSoftElectronULA.pdf) to help identify pins.
 - Taking it out and re-programming it - check that it says it verified after writing. If not, check the programmer is wired correctly.
 - Check the pins are making a good connection in the socket - I check the top of each interrconnecting header pin with the leg of the component on the mainboard is showing continuity. Use the Schematic here and the Electron Schematics to see what pin of the interrconnects go where.
 - Double check for solder bridges and poorly connected pins on the FPGA and Level Shiter ICs. Prod them under a microscope and look for movement and test continuity with adjacent pins (nice sharp multimeter probes are really helpful for this).
