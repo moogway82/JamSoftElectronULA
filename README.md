@@ -148,21 +148,23 @@ As it would be a massive pain to desolder the header pins that hold the two boar
 
 If you want to test the FPGA before committing to sandwiching then you can program it (see 'Programming the FPGA' below), connect the following signals from the BOTTOM board to the TOP and then test voltages with a multimeter and some other outputs on an oscilliscope.
 
-The pins to connect are:
+![Top board pins to connect to bottom board for first test](Photos/JamSoftElectronULA-first-tests.jpg)
+
+The pins to connect are (white labeled pads in above diagram):
 
 - 5V
 - GND
 - 16MHz
 - PoR (Power on Reset)
 
-Install the bottom board into the Electron, power it up and check:
+Install the bottom board into the Electron, power it up and check (yellow and green pads):
 
  - 1.2V
  - 3.3V 
  - CPU clock out (aka Phi0) - should be a 2MHz, 50% duty cycle
  - RAS - should be 2MHz, ~24% duty cycle
  - CAS - roughly 4Mhz, variable duty cylce
- - CSync - 
+ - CSync - Composite video signal, 50Hz HSync lows and maybe some other random graphics
 
 Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges. I think a 2.5mm-3mm gap, the standard insulation hight on header pins, is enough clearance, but do double check by holding it up to the light. Also, the tops of socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
 
