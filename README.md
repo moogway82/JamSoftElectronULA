@@ -76,6 +76,8 @@ Ideas for future 'Frills' could be:
 - Multiple ROM support 
 - ...whatever you can think of, the code's all here, knock yourself out!
 
+If you're looking for a more advanced ULA replacement with more upgrade options, I would highly recommend [budgie's ElectronULA project](https://github.com/EquasysIT/ElectronULA) which uses a Intel Max 10 FPGA and features SD-Card/MMFS, 2MHz/4MHz turbo modes, Mode 7 emulation, VGA output and more.
+
 # Building your own
 
 The current design is made of 2 PCBs: a main 'TOP' board with the FPGA and most components and a 'BOTTOM' socket adapter board with a few pull-ups on it. The two boards are sandwiched together using short header pins. I made it this way to keep the overall footprint as small as possible and make it look a bit more ULA-chip-like than a big daughter board would have. Although, I do admit that a larger board would've been easier to make and assemble... feel free to make your own version :)
@@ -141,6 +143,26 @@ As it would be a massive pain to desolder the header pins that hold the two boar
   - Still in continuity, touching each side of the component and checking that it's not shorted - caps may beep when charging but as before, should not be continuous.
 
 - If JLCPCB/PCBWay have done the assembly here, I usually just give it a good visual inspection after testing the power rails.
+
+#### Program and first tests of FPGA
+
+If you want to test the FPGA before committing to sandwiching then you can program it (see 'Programming the FPGA' below), connect the following signals from the BOTTOM board to the TOP and then test voltages with a multimeter and some other outputs on an oscilliscope.
+
+The pins to connect are:
+
+- 5V
+- GND
+- 16MHz
+- PoR (Power on Reset)
+
+Install the bottom board into the Electron, power it up and check:
+
+ - 1.2V
+ - 3.3V 
+ - CPU clock out (aka Phi0) - should be a 2MHz, 50% duty cycle
+ - RAS - should be 2MHz, ~24% duty cycle
+ - CAS - roughly 4Mhz, variable duty cylce
+ - CSync - 
 
 Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges. I think a 2.5mm-3mm gap, the standard insulation hight on header pins, is enough clearance, but do double check by holding it up to the light. Also, the tops of socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
 
@@ -293,7 +315,7 @@ Big thanks to the following people for their support, inspiration and feedback:
 - Eric Schlaepfer (aka TubeTime) for the Graphics Gremlin project which gave me an inexpensive, Open-Source, 5V tollerant FPGA project to form the base of my hardware design
 - Dave Hitchins for being really supportive to me from early on and sharing his knowledge and Electron hardware for me to test against
 - Gary Colville (aka ramtop) for his support and providing access to his amazing ElkSD which sped up testing considerably
-- Julian, a volunteer at the RMC Retro Cave who was really supportive and gave me a much needed boost to carry on when it wasn't going well
+- Julian, a volunteer at the RMC Cave who was really supportive when I visited and gave me a much needed boost to carry on when it wasn't going well
 - The Stardot community - great group of people and just an amazing place for all things Acorn
 - MFMI Lee and his Discord Server for just being a super supportive community and giving me the push to get this out there
 - Libi, my amazing partner for putting up with me mucking about on old computers
