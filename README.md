@@ -66,7 +66,7 @@ I've also sunk about as much time and money into this project as I wish to at pr
 
 ## * Well, 1 Frill, actually...
 
-The 1 'frill' with the current version is a simple Turbo mode which can be enabled using the key combo Ctrl + Caps + 2. The turbo mode uses the 8KB of embeded Block RAM on the FPGA as fast, 2MHz CPU clock & un-contended RAM which replaces the lower 8K of memory from the slower DRAM and provides a decent speed boost, especially in Modes 0-3 where the CPU is usually halted when trying to access RAM duing an active scanline. Normal speed is resumed as soon as a Break is issued. This almost gets the Elk up to BBC B speeds on the ClockSp benchmark. Many thanks to the [Ramtop-Retro's OSTC project](https://github.com/ramtop-retro/ostc) for providing the inspiration here.
+The 1 'frill' with the current version is a simple Turbo mode which can be enabled using the key combo Ctrl + Caps + 2. The turbo mode uses the 8KB of embedded Block RAM on the FPGA as fast, 2MHz CPU clock & un-contended RAM which replaces the lower 8K of memory from the slower DRAM and provides a decent speed boost, especially in Modes 0-3 where the CPU is usually halted when trying to access RAM duing an active scanline. Normal speed is resumed as soon as a Break is issued. This almost gets the Elk up to BBC B speeds on the ClockSp benchmark. Many thanks to the [Ramtop-Retro's OSTC project](https://github.com/ramtop-retro/ostc) for providing the inspiration here.
 
 Ideas for future 'Frills' could be:
 
@@ -124,7 +124,7 @@ As it would be a massive pain to desolder the header pins that hold the two boar
 
 #### Upper-side of the BOTTOM board:
 
-- All the resisters are pull-ups here, so using multimeter in resistance mode, put one probe on 5V 'pad, coloured red below, and the other one:
+- All the resisters are pull-ups here, so using multimeter in resistance mode, put one probe on 5V pad, coloured red below, and the other one:
 
   - Green pads for R16, R17, R18, R19: should each be about 4.7kΩ
   - Blue pad for R2: should be about 10kΩ
@@ -150,7 +150,7 @@ If you want to test the FPGA before committing to sandwiching then you can progr
 
 ![Top board pins to connect to bottom board for first test](Photos/JamSoftElectronULA-first-tests.jpg)
 
-The pins to connect are (white labeled pads in above diagram):
+The pins to connect are (white labelled pads in above diagram):
 
 - 5V
 - GND
@@ -299,8 +299,8 @@ Here are some things you can check for:
 - You did plug in the Speaker and Video cables and check the monitor/TV was tuned and working, right? :)
 - Check voltages on the board using a multimeter - are you seeing a nice 5V, 3.3V and 1.2V on the board when powered up? Voltages can be easily checked on the pins of the Voltage Regulators - see the [Schematics](Hardware/Schematic_JamSoftElectronULA.pdf) to help identify pins.
 - Taking it out and re-programming it - check that it says it verified after writing. If not, check the programmer is wired correctly.
-- Check the pins are making a good connection in the socket - I check the top of each interconnecting header pin with the leg of the component on the mainboard is showing continuity. Use the Schematic here and the Electron Schematics to see what pin of the interrconnects go where.
-- Double check for solder bridges and poorly connected pins on the FPGA and Level Shiter ICs. Prod them under a microscope and look for movement and test continuity with adjacent pins (nice sharp multimeter probes are really helpful for this).
+- Check the pins are making a good connection in the socket - I check the top of each interconnecting header pin with the leg of the component on the mainboard is showing continuity. Use the Schematic here and the Electron Schematics to see what pin of the interconnects go where.
+- Double check for solder bridges and poorly connected pins on the FPGA and Level Shifter ICs. Prod them under a microscope and look for movement and test continuity with adjacent pins (nice sharp multimeter probes are really helpful for this).
 - If you have a scope you can check that the FPGA is reading the SPI ROM on start-up (probe the CIPO pin 5 on the config header pin, is it showing a burst of activity on power up). If not the FPGA may be stuck in PoR (missing one of its voltages) or the SPI ROM chip is not connected properly.
 - Usual troubleshooting now applies... Time to get the scope out and check: Elk's PoR signal, 16MHz Oscillator, CPU Reset, Phi0, ROM enable, Address lines, Data lines, DRAM CAS/RAS, DRAM Address lines, DRAM Data lines, etc... See anything weird? Check the FPGA board soldering or socket connections to those signals using the schematic. Maybe the Elk Motherboard needs some work too (ie, needs a good Power on Reset signal and 16MHz clock), maybe you have a you have a bad 16MHz Crystal, 6502, DRAM, ROM, etc..? I have a basic diag ROM called the [ElkWSS-DiagROM](https://github.com/moogway82/ElkWSS-DiagROM) which might help see if PoR, CPU and DRAM is working ok...
 - Get in touch via the [Stardot forums](https://stardot.org.uk/forums/index.php), I might be able to help or others might have some ideas what's going wrong...
