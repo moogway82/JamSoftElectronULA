@@ -50,7 +50,7 @@ The bulk of development and testing has been done on 2 Electrons with the follow
 
 - A repaired Issue 6 board with a Rockwell R6502 and 4x Samsung KM4164B-15 DRAM chips. Tested with and without IC18 to buffer/unbuffer the 16MHz clock, PHI0 and NMI signals.
 - An Issue 4 board with a UMC UM6502 and 4x TI TMS4164-15 DRAM chips.
-- A repaired Issue 6 Electon PSU Board, powered from a non-original 12V AC Adapter
+- A repaired Issue 6 Electron PSU Board, powered from a non-original 12V AC Adapter
 
 The JamSoftElectronULA is being provided as-is, with no guarantees. I've had a lot of issues come and go with reliability during the course of development and testing but I think it's in a good-enough state now to get out there and not be just sitting on my workbench.
 
@@ -163,7 +163,7 @@ Install the bottom board into the Electron, power it up and check (yellow and gr
  - 3.3V 
  - CPU clock out (aka Phi0) - should be a 2MHz, 50% duty cycle
  - RAS - should be 2MHz, ~24% duty cycle
- - CAS - roughly 4Mhz, variable duty cylce
+ - CAS - roughly 4Mhz, variable duty cycle
  - CSync - Composite video signal, 50Hz HSync lows and maybe some other random graphics
 
 Be careful when joining the two boards to ensure that components on the facing surfaces don't make contact and create bridges. I think a 2.5mm-3mm gap, the standard insulation height on header pins, is enough clearance, but do double check by holding it up to the light. Also, the tops of socket pins on the BOTTOM board may have solder peaks on them that might need smoothing off.
@@ -267,7 +267,7 @@ And then run:
 make progpi
 ```
 
-See the 'progpi:' section of the [Makefile](Software/Makefile) for the commands that are run to do the programming if you want to do that with just the bitstream file manually.
+See the `progpi:` section of the [Makefile](Software/Makefile) for the commands that are run to do the programming if you want to do that with just the bitstream file manually.
 
 ### On Mac OS X:
 
