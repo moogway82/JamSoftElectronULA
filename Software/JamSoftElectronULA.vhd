@@ -27,8 +27,6 @@ entity JamSoftElectronULA is
         R_W_n     : in  std_logic;
         data_en_n : out std_logic; -- Remove ULA from Data bus when it's not being read from (ie, CPU is talking to ROM)
 
-
-        POR_n     : in std_logic;
         -- Can't easily translate the open-collector RST_in 'inout' between 5V and 3V domains, so changing to RST IN and OUT with
         -- circuitry used in other ULA replacement projects.
         RST_IN_n  : in std_logic;
@@ -54,8 +52,7 @@ entity JamSoftElectronULA is
         blue      : out std_logic;
         -- No VSync
         csync     : out std_logic;
-        -- Currently unused
-        HS_n      : out std_logic := '1';
+        HS_n      : out std_logic;
 
         -- Audio
         sound     : out std_logic;
@@ -98,6 +95,7 @@ architecture behavioral of JamSoftElectronULA is
   signal master_irq     : std_logic;
 
   signal power_on_reset : std_logic; -- := '1';
+  signal POR_n          : std_logic := '0'; -- ice40 Power on State should be '0';
 
   signal delayed_clear_reset : std_logic_vector(3 downto 0); -- := '0';
 
@@ -216,7 +214,7 @@ architecture behavioral of JamSoftElectronULA is
   signal cpu_clk        : std_logic; -- := '1';
   signal not_cpu_clk    : std_logic;
   signal clk_counter    : std_logic_vector(2 downto 0); -- := (others => '0');
-  signal por_cpu_rst_counter : std_logic_vector (7 downto 0); -- Counter to reset the CPU after power on
+  signal por_cpu_rst_counter : std_logic_vector (14 downto 0); -- Counter to reset the CPU after power on
 
   signal ula_irq_n         : std_logic;
 
@@ -255,6 +253,18 @@ end;
 
 begin
 
+    -- Synthesise PoR signal
+    -- ice40 registers should have a Power on State of '0', so can use this to simulate a PoR signal
+    -- The Elk PoR signal is not very long or very reliable. Also I'm not correcting it using a schmidt
+    -- trigger input so it's oscialting wildly for a few ms on statup. Synthesising it instead.
+    gen_por : process (clk_16M00)
+    begin
+        if(rising_edge(clk_16M00)) then
+            POR_n <= '1';
+        end if;
+    end process; -- gen_por
+
+
     -- Turbo_RAM write enable 
     turbo_we <= not R_W_n when addr(15 downto 12) = x"1" or addr(15 downto 12) = x"0"  else --Inverted '1' for write, '0' for Read
                 '0'; -- Otherwise Read
@@ -274,7 +284,7 @@ begin
 
     -- TESTING PIN - This will change depending on what I need to check
     testing_pin <= '0';
-        
+
 
     -- I'm only using mode 01 from the ElectronFpga project as it's original Electron video timing constants
     -- mode 00 - RGB/s @ 50Hz non-interlaced
@@ -284,7 +294,7 @@ begin
 
     -- Reset is open collector to avoid contention when BREAK pressed
     -- RST_OUT_n <= '0' when POR_n = '0' else '1';
-    -- CPU needs a clock whilst in reset is held, so lets try and give the CPU at least 16 clock ticks before reset is
+    -- CPU needs a clock whilst in reset is held, so lets try and give the CPU plenty of clock ticks before reset is
     -- pulled high following PoR going high.
     por_delay_cpu_rst : process (clk_16M00, POR_n)
     begin
@@ -296,12 +306,10 @@ begin
 
       elsif rising_edge(clk_16M00) then
 
-        if not (por_cpu_rst_counter = x"FF") then -- 1MHz clock would be 16 OSC pulses, so 16 of them is 256 = 0xFF
+        if (por_cpu_rst_counter(14) = '0') then
           por_cpu_rst_counter <= std_logic_vector(unsigned(por_cpu_rst_counter) + 1);
-        else
-          RST_OUT_n <= '1';
         end if;
-
+        RST_OUT_n <= por_cpu_rst_counter(14);
       end if;
         
     end process;
@@ -714,7 +722,7 @@ begin
         end if;
     end process; -- rtcint_cassette_regs
 
-    caps  <= caps_int;
+    caps  <= not caps_int;
     motor <= motor_int;
 
     -- RGBs timing at 50Hz with a 16.000MHz Pixel Clock
@@ -1024,8 +1032,7 @@ begin
     green <= green_int;
     blue  <= blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
-    -- TODO: Should this be inverted?
-    HS_n  <= not hsync_int;
+    HS_n  <= hsync_int;
 
 
 --------------------------------------------------------
