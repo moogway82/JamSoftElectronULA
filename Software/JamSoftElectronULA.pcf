@@ -34,7 +34,6 @@ set_io 	data[7]     	64
 set_io 	data_en_n 		74
 
 set_io	R_W_n			69
-set_io 	POR_n 			71
 set_io	IRQ_n			97
 set_io	dram_data[0]	37
 set_io	dram_data[1]	40

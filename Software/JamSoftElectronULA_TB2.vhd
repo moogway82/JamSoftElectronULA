@@ -7,8 +7,9 @@ entity JamSoftElectronULA_TB2 is
     run_sound_out_test  : boolean := false;
     run_rgb_test        : boolean := true;
     rgb_test_quick      : boolean := false;
+    run_turbo_mode      : boolean := true;
     run_ram_test        : boolean := true;
-    ram_test_quick      : boolean := true; -- Quick RAM Test uses only sequencial write pattern
+    ram_test_quick      : boolean := false; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
     run_caps_test       : boolean := false;
@@ -19,7 +20,7 @@ entity JamSoftElectronULA_TB2 is
 end;
 
 architecture behavioral of JamSoftElectronULA_TB2 is
-  signal clk_16M00, R_W_n, data_en_n, POR_n, RST_IN_n, RST_OUT_n, IRQ_n, ROM_n, red, green, blue, csync, HS_n, sound, casIn, casOut, caps, motor, cpu_clk_out, testing_pin : std_logic;
+  signal clk_16M00, R_W_n, data_en_n, RST_IN_n, RST_OUT_n, IRQ_n, ROM_n, red, green, blue, csync, HS_n, sound, casIn, casOut, caps, motor, cpu_clk_out, testing_pin : std_logic;
   -- signal NMI_n : std_logic;
   signal addr : std_logic_vector(15 downto 0);
   -- signal data_in, data_out : std_logic_vector(7 downto 0);
@@ -44,7 +45,7 @@ begin
     data => data,
     R_W_n => R_W_n,
     data_en_n => data_en_n,
-    POR_n => POR_n,
+    -- POR_n => POR_n,
     RST_IN_n => RST_IN_n,
     RST_OUT_n => RST_OUT_n,
     IRQ_n => IRQ_n,
@@ -112,36 +113,36 @@ begin
   if run_phi_test = true then
 
     -- Nothing but OSC
-    wait for 20 us;
+    --wait for 20 us;
     -- What if POR is just held high?
     -- POR_n <= '1';
     -- wait for 10 us;
     -- Commented out the 16MHz CLK gen, what now?
-    POR_n <= '1';
-    wait for  20 us;
-    POR_n <= '1';
-    wait for  200 us;
+    --POR_n <= '1';
+    --wait for  20 us;
+    --POR_n <= '1';
+    --wait for  200 us;
     --RST_IN_n <= '0';
     --wait for 50 us;
 
   end if;
 
     -- wait until falling_edge(clk_16M00);
-    POR_n <= '0';
-    wait for  10 us;
-    POR_n <= '1';
+    --POR_n <= '0';
+    --wait for  10 us;
+    --POR_n <= '1';
     -- simulate CPU Reset read from 0xFFFC & 0xFFFD
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FFFC";
-    data <= (others => 'Z');
-    R_W_n <= '1';
+    --wait until falling_edge(cpu_clk_out);
+    --wait for cpu_addr_ready;
+    --addr <= x"FFFC";
+    --data <= (others => 'Z');
+    --R_W_n <= '1';
 
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FFFD";
-    data <= (others => 'Z');
-    R_W_n <= '1';
+    --wait until falling_edge(cpu_clk_out);
+    --wait for cpu_addr_ready;
+    --addr <= x"FFFD";
+    --data <= (others => 'Z');
+    --R_W_n <= '1';
 
     wait until RST_OUT_n = '1';
 
@@ -219,6 +220,42 @@ begin
     addr <= x"C000";
     data <= x"00"; 
     R_W_n <= '1';
+
+  end if;
+
+  if run_turbo_mode = true then
+
+    -------------------------------
+    -- 9. Keyboard & Turbo Test
+    -------------------------------
+    -- Keyboard page 8 & 9 (1000 & 1001)
+    -- Page in ROM 8 (keyboard)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001000";
+    R_W_n <= '0';
+    -- Caps Lk + Ctrl read &9FFF
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"9FFF";
+    data <= (others => 'Z');
+    R_W_n <= '1';
+    kbd <= "1001";
+    -- Number 2
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"B7FF";
+    data <= (others => 'Z');
+    R_W_n <= '1';
+    kbd <= "1110";
+    -- Is turbo on?
+    -- Put BASIC back in and run RAM test...
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE05";
+    data <= "00001010"; -- ROM no. 10
+    R_W_n <= '0';
 
   end if;
 
@@ -388,6 +425,8 @@ begin
     --wait for 10 us;
 
   end if;
+
+ 
 
   if run_ram_test = true then
 
@@ -704,6 +743,12 @@ begin
   end if;
 
   if run_paging_test = true then
+
+
+    -------------------------------
+    -- 8. ROM Paging Test
+    -------------------------------
+
     -- Page in ROM 15
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
@@ -869,6 +914,8 @@ begin
     assert ROM_n = '1' report "ROM_n should go low as BASIC should still be paged in." severity error;
 
   end if;
+
+
   
 
     wait until falling_edge(cpu_clk_out);

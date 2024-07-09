@@ -155,7 +155,6 @@ The pins to connect are (white labelled pads in above diagram):
 - 5V
 - GND
 - 16MHz
-- PoR (Power on Reset)
 
 Install the bottom board into the Electron, power it up and check (yellow and green pads):
 
@@ -193,7 +192,7 @@ make
 
 ### On Linux:
 
-There is a pre-build binary configuration file in the 'Software' folder [JamSoftElectronULA_config_medium.bin](Software/JamSoftElectronULA_config_medium.bin), but the iceprog tool (from [YoSysHQ OSS-CAD-Suite-build project](https://github.com/YosysHQ/oss-cad-suite-build)) will still be required to program it to the configuation ROM using the Makefile.
+There is a pre-build binary configuration file in the 'Software' folder [JamSoftElectronULA.bin](Software/JamSoftElectronULA.bin), but the iceprog tool (from [YoSysHQ OSS-CAD-Suite-build project](https://github.com/YosysHQ/oss-cad-suite-build)) will still be required to program it to the configuation ROM using the Makefile.
 
 Programming the firmware can be done using a [cheap FT232H board](https://www.aliexpress.com/item/32817060303.html) or FT2232H boards. A Raspberry Pi can also be used, see below. With the JamSoftElectronULA board out of the Electron socket, connect the programming pins as shown:
 
@@ -302,7 +301,7 @@ Here are some things you can check for:
 - Check the pins are making a good connection in the socket - I check the top of each interconnecting header pin with the leg of the component on the mainboard is showing continuity. Use the Schematic here and the Electron Schematics to see what pin of the interconnects go where.
 - Double check for solder bridges and poorly connected pins on the FPGA and Level Shifter ICs. Prod them under a microscope and look for movement and test continuity with adjacent pins (nice sharp multimeter probes are really helpful for this).
 - If you have a scope you can check that the FPGA is reading the SPI ROM on start-up (probe the CIPO pin 5 on the config header pin, is it showing a burst of activity on power up). If not the FPGA may be stuck in PoR (missing one of its voltages) or the SPI ROM chip is not connected properly.
-- Usual troubleshooting now applies... Time to get the scope out and check: Elk's PoR signal, 16MHz Oscillator, CPU Reset, Phi0, ROM enable, Address lines, Data lines, DRAM CAS/RAS, DRAM Address lines, DRAM Data lines, etc... See anything weird? Check the FPGA board soldering or socket connections to those signals using the schematic. Maybe the Elk Motherboard needs some work too (ie, needs a good Power on Reset signal and 16MHz clock), maybe you have a you have a bad 16MHz Crystal, 6502, DRAM, ROM, etc..? I have a basic diag ROM called the [ElkWSS-DiagROM](https://github.com/moogway82/ElkWSS-DiagROM) which might help see if PoR, CPU and DRAM is working ok...
+- Usual troubleshooting now applies... Time to get the scope out and check: 16MHz Oscillator, CPU Reset, Phi0, ROM enable, Address lines, Data lines, DRAM CAS/RAS, DRAM Address lines, DRAM Data lines, etc... See anything weird? Check the FPGA board soldering or socket connections to those signals using the schematic. Maybe the Elk Motherboard needs some work too (ie, needs a good 16MHz clock), maybe you have a you have a bad 16MHz Crystal, 6502, DRAM, ROM, etc..? I have a basic diag ROM called the [ElkWSS-DiagROM](https://github.com/moogway82/ElkWSS-DiagROM) which might help see if PoR, CPU and DRAM is working ok...
 - Get in touch via the [Stardot forums](https://stardot.org.uk/forums/index.php), I might be able to help or others might have some ideas what's going wrong...
 
 # Acknowledgements
@@ -320,6 +319,7 @@ Big thanks to the following people for their support, inspiration and feedback:
 - Julian, a volunteer at the RMC Cave who was really supportive when I visited and gave me a much needed boost to carry on when it wasn't going well
 - The Stardot community - great group of people and just an amazing place for all things Acorn
 - MFMI Lee and his Discord Server for just being a super supportive community and giving me the push to get this out there
+- Jon (Ronin47) for being one of the first people to make one up and helping to diagnosing some of the issues he found and test fixes, it's a much better board for it!
 - Libi, my amazing partner for putting up with me mucking about on old computers
 
 
