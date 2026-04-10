@@ -5,17 +5,18 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA_TB2 is
   generic (
     run_sound_out_test  : boolean := false;
-    run_rgb_test        : boolean := true;
+    run_rgb_test        : boolean := false;
     rgb_test_quick      : boolean := false;
-    run_turbo_mode      : boolean := true;
+    run_turbo_mode      : boolean := false;
     run_ram_test        : boolean := true;
-    ram_test_quick      : boolean := false; -- Quick RAM Test uses only sequencial write pattern
+    ram_test_quick      : boolean := true; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
     run_caps_test       : boolean := false;
     run_phi_test        : boolean := false;
-    run_sync_ram_slot   : boolean := true;
-    run_paging_test     : boolean := true
+    run_sync_ram_slot   : boolean := false;
+    run_paging_test     : boolean := false;
+    run_mode7_test      : boolean := true
   );
 end;
 
@@ -915,8 +916,55 @@ begin
 
   end if;
 
+    -------------------------------
+    -- 9. MODE 7 Tests
+    -------------------------------  
 
-  
+  if run_mode7_test = true then
+
+
+    -- Write some bytes
+    rgb_test_vram_addr := x"7C00";
+    for i in 0 to 1000 loop
+      wait until falling_edge(cpu_clk_out);
+      wait for cpu_addr_ready;
+      addr <= rgb_test_vram_addr;
+      data <=  x"20";
+      R_W_n <= '0';
+      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+    end loop;
+
+    -- Set Mode 7
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE07";
+    data <= "00111000"; 
+    R_W_n <= '0';
+
+    -- Set Screen Start Address
+--; SHEILA &FE02 and &FE03
+--; &7C00 = 0111 1100 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 111 110 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00111110 = &3E
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"00"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"3E"; 
+    R_W_n <= '0';
+
+    wait for 40 ms;
+
+  end if;
 
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);

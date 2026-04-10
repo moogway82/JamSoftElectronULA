@@ -29,7 +29,10 @@ JamSoftElectronULA_64k.bin: JamSoftElectronULA.bin
 test: GHDL
 	$(OSSCADBINPATH)/ghdl -a JamSoftElectronULA_TB2.vhd 
 	$(OSSCADBINPATH)/ghdl -e JamSoftElectronULA_TB2
-	$(OSSCADBINPATH)/ghdl -r JamSoftElectronULA_TB2 --vcd=JamSoftElectronULA_TB2_9.vcd --ieee-asserts=disable
+	$(OSSCADBINPATH)/ghdl -r JamSoftElectronULA_TB2 --wave=JamSoftElectronULA_TB2_10.ghw --ieee-asserts=disable
+
+view:
+	surfer JamSoftElectronULA_TB2_10.ghw -s mode7.surf.ron > /dev/null &
 
 clean:
 	rm -f JamSoftElectronULA.bin JamSoftElectronULA_64k.bin JamSoftElectronULA_config_medium.bin JamSoftElectronULA.json JamSoftElectronULA.asc JamSoftElectronULA.o JamSoftElectronULA_TB2.o e~jamsoftelectronula.o e~jamsoftelectronula_tb2.o e~tm4164ea3_64k_w4.o tm4164ea4_64k_w4.o e~turbo_ram.o turbo_ram.o work-obj93.cf tm4164ea3_64k_w4 turbo_ram jamsoftelectronula jamsoftelectronula_tb2

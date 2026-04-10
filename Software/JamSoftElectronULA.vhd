@@ -18,6 +18,9 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
+    generic (
+        mode7_support  : boolean := true
+    );
     port (
         clk_16M00 : in  std_logic;
 
@@ -143,9 +146,9 @@ architecture behavioral of JamSoftElectronULA is
   -- DEBUGGING screen address variables
   -- signal pixel_debug : std_logic_vector(3 downto 0);
   -- start address of current row block (8-10 lines)
-  -- signal row_addr_debug  : std_logic_vector(14 downto 6);
+   signal row_addr_debug  : std_logic_vector(14 downto 6);
   -- address within current line
-  -- signal byte_addr_debug : std_logic_vector(14 downto 3);
+   signal byte_addr_debug : std_logic_vector(14 downto 3);
 
   -- Screen Mode Registers
 
@@ -696,10 +699,10 @@ begin
                                     mode_text    <= '1';
                                 when "111" =>
                                     -- mode 7 seems to default to mode 4
-                                    mode_base    <= "1011"; -- 0x5800
+                                    mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
                                     mode_bpp     <= "00";
                                     mode_40      <= '1';
-                                    mode_text    <= '0';
+                                    mode_text    <= '1';
                                 when others =>
                                 end case;
                                 comms_mode   <= data_in(2 downto 1);
@@ -797,6 +800,7 @@ begin
 
           -- Char_row counts 0..7 or 0..9 depending on the mode.
           -- It incremented on the trailing edge of hsync
+          -- TODO: Mode 7 need 10 lines, so normal text mode 0..9 then
           hsync_int_last <= hsync_int;
           if hsync_int = '1' and hsync_int_last = '0'  then
               if v_count = v_total then
@@ -861,7 +865,6 @@ begin
 
           -- Screen_addr is the final 15-bit Video RAM address
           screen_addr <= byte_addr & char_row(2 downto 0);
-
 
           -- Pixels start being plotted on a row at h_count=0 so need to have the 
           -- Screen Data ready for then.
@@ -1020,11 +1023,11 @@ begin
         end if;
 
       --DEBUG:
-      -- pixel_debug <= pixel;
+       --pixel_debug <= pixel;
       -- start address of current row block (8-10 lines)
-      -- row_addr_debug <= row_addr;
+       row_addr_debug <= row_addr;
       -- address within current line
-      -- byte_addr_debug <= byte_addr;
+       byte_addr_debug <= byte_addr;
 
     end process;
 
