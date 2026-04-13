@@ -9,7 +9,7 @@ entity JamSoftElectronULA_TB2 is
     rgb_test_quick      : boolean := false;
     run_turbo_mode      : boolean := false;
     run_ram_test        : boolean := true;
-    ram_test_quick      : boolean := true; -- Quick RAM Test uses only sequencial write pattern
+    ram_test_quick      : boolean := false; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
     run_caps_test       : boolean := false;
@@ -455,6 +455,28 @@ begin
     addr <= x"FE07";
     data <= "00110000"; 
     R_W_n <= '0';
+
+    -- Set Screen Start Address to 0x6000
+--; SHEILA &FE02 and &FE03
+--; &6000 = 0011 0000 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 110 000 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00110000 = &30
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"00"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"30"; 
+    R_W_n <= '0';
+
 
     -- Write bytes
     rgb_test_vram_addr := x"0000";
@@ -969,6 +991,7 @@ begin
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);
+
     assert false report "End of testing, phew!" severity failure;
     wait;
   end process;

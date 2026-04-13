@@ -19,7 +19,7 @@ use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
     generic (
-        mode7_support  : boolean := true
+        IncludeMode7  : boolean := true
     );
     port (
         clk_16M00 : in  std_logic;
@@ -144,7 +144,7 @@ architecture behavioral of JamSoftElectronULA is
   signal screen_data    : std_logic_vector(7 downto 0);
 
   -- DEBUGGING screen address variables
-  -- signal pixel_debug : std_logic_vector(3 downto 0);
+   signal pixel_debug : std_logic_vector(3 downto 0);
   -- start address of current row block (8-10 lines)
    signal row_addr_debug  : std_logic_vector(14 downto 6);
   -- address within current line
@@ -163,6 +163,9 @@ architecture behavioral of JamSoftElectronULA is
 
   -- a '1' indicates a 40-col mode (modes 4, 5 and 6)
   signal mode_40        : std_logic;
+
+  -- a '1' indicates that it's mode 7 and using the SAA5050 as character generator
+  signal mode_ttxt      : std_logic;
 
   signal last_line      : std_logic;
 
@@ -438,6 +441,7 @@ begin
                cintone         <= '0';
                ctrl_caps       <= '0';
                turbo           <= '0';
+               mode_ttxt       <= '0';
 
             else
  
@@ -667,42 +671,58 @@ begin
                                     mode_bpp     <= "00";
                                     mode_40      <= '0';
                                     mode_text    <= '0';
+                                    mode_ttxt    <= '0';
                                 when "001" =>
                                     mode_base    <= "0110"; -- 0x3000
                                     mode_bpp     <= "01";
                                     mode_40      <= '0';
                                     mode_text    <= '0';
+                                    mode_ttxt    <= '0';
                                 when "010" =>
                                     mode_base    <= "0110"; -- 0x3000
                                     mode_bpp     <= "10";
                                     mode_40      <= '0';
                                     mode_text    <= '0';
+                                    mode_ttxt    <= '0';
                                 when "011" =>
                                     mode_base    <= "1000"; -- 0x4000
                                     mode_bpp     <= "00";
                                     mode_40      <= '0';
                                     mode_text    <= '1';
+                                    mode_ttxt    <= '0';
                                 when "100" =>
                                     mode_base    <= "1011"; -- 0x5800
                                     mode_bpp     <= "00";
                                     mode_40      <= '1';
                                     mode_text    <= '0';
+                                    mode_ttxt    <= '0';
                                 when "101" =>
                                     mode_base    <= "1011"; -- 0x5800
                                     mode_bpp     <= "01";
                                     mode_40      <= '1';
                                     mode_text    <= '0';
+                                    mode_ttxt    <= '0';
                                 when "110" =>
                                     mode_base    <= "1100"; -- 0x6000
                                     mode_bpp     <= "00";
                                     mode_40      <= '1';
                                     mode_text    <= '1';
+                                    mode_ttxt    <= '0';
                                 when "111" =>
-                                    -- mode 7 seems to default to mode 4
-                                    mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '1';
+                                    if IncludeMode7 = true then
+                                        mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
+                                        mode_bpp     <= "00";
+                                        mode_40      <= '1';
+                                        mode_text    <= '1';
+                                        mode_ttxt    <= '1';
+                                    else 
+                                        -- mode 7 seems to default to mode 4
+                                        mode_base    <= "1011"; -- 0x5800
+                                        mode_bpp     <= "00";
+                                        mode_40      <= '1';
+                                        mode_text    <= '0';
+                                        mode_ttxt    <= '0';
+                                    end if;
                                 when others =>
                                 end case;
                                 comms_mode   <= data_in(2 downto 1);
@@ -748,10 +768,9 @@ begin
     contention   <= '0' when  h_count >= h_active else
                     '0' when  (mode_text = '0' and v_count >= v_active_gph) else
                     '0' when  (mode_text = '1' and v_count >= v_active_txt) else
-                    '0' when  (unsigned(char_row) >= 8) else
+                    '0' when  (unsigned(char_row) >= 8) else    -- TODO Mode7: This may not be true for Mode 7...
                     not mode_40;
 
-    -- ToDo: Shouldn't this process be sensitive to RST_n/POR_n also?
     gen_video : process (clk_16M00,RST_IN_n)
         variable pixel : std_logic_vector(3 downto 0);
         -- start address of current row block (8-10 lines)
@@ -805,7 +824,7 @@ begin
           if hsync_int = '1' and hsync_int_last = '0'  then
               if v_count = v_total then
                   char_row <= (others => '0');
-              elsif v_count(0) = '1' or true then -- the 'true' here was: "mode(1) = '0'" I've stripped out mode, but don't really know how this works...
+              else
                   if last_line = '1' then
                       char_row <= (others => '0');
                   else
@@ -833,9 +852,18 @@ begin
           -- https://www.mups.co.uk/project/hardware/acorn_electron/
 
           -- At start of the field, update row_addr and byte_addr from the ULA registers 2,3
+          -- For Mode 7 (aka mode_ttxt) then:
+          -- -row_addr(14 downto 6) is actually (11 downto 3)
+          -- -byte_addr(14 downto 3) is actually (11 downto 0) as no lines are added to address
+          -- bit confusing to remap
           if h_count = h_reset_addr and v_count = v_total then
-              row_addr  := screen_base;
-              byte_addr := screen_base & "000";
+              if mode_ttxt = '0' then
+                row_addr  := screen_base;
+                byte_addr := screen_base & "000";
+              else 
+                row_addr  := screen_base(11 downto 6) & "000";
+                byte_addr := screen_base(11 downto 6) & "000000";
+              end if;
           end if;
 
           -- At the start of hsync,  update the row_addr from byte_addr which
@@ -859,12 +887,18 @@ begin
           end if;
 
           -- Handle wrap-around back to mode_base
-          if byte_addr(14 downto 11) = "0000" then
+          -- Unless Mode 7 then we don't care, just leave it to loop as top 5 bits are always 11111 so lowest is 7C00 and highest 7FFF
+          -- Not sure how those 23 characters are delt with...
+          if byte_addr(14 downto 11) = "0000" and mode_ttxt = '0' then
               byte_addr := mode_base & byte_addr(10 downto 3);
           end if;
 
           -- Screen_addr is the final 15-bit Video RAM address
-          screen_addr <= byte_addr & char_row(2 downto 0);
+          if mode_ttxt = '0' then 
+            screen_addr <= byte_addr & char_row(2 downto 0);
+          else 
+            screen_addr <= "11111" & byte_addr(12 downto 3);
+          end if;
 
           -- Pixels start being plotted on a row at h_count=0 so need to have the 
           -- Screen Data ready for then.
@@ -1023,7 +1057,7 @@ begin
         end if;
 
       --DEBUG:
-       --pixel_debug <= pixel;
+       pixel_debug <= pixel;
       -- start address of current row block (8-10 lines)
        row_addr_debug <= row_addr;
       -- address within current line

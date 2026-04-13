@@ -29,7 +29,7 @@ JamSoftElectronULA_64k.bin: JamSoftElectronULA.bin
 test: GHDL
 	$(OSSCADBINPATH)/ghdl -a JamSoftElectronULA_TB2.vhd 
 	$(OSSCADBINPATH)/ghdl -e JamSoftElectronULA_TB2
-	$(OSSCADBINPATH)/ghdl -r JamSoftElectronULA_TB2 --wave=JamSoftElectronULA_TB2_10.ghw --ieee-asserts=disable
+	$(OSSCADBINPATH)/ghdl -r JamSoftElectronULA_TB2 --wave=JamSoftElectronULA_TB2_10.ghw --ieee-asserts=disable --read-wave-opt=wave-opts # --stop-time=150ms
 
 view:
 	surfer JamSoftElectronULA_TB2_10.ghw -s mode7.surf.ron > /dev/null &
