@@ -8,3 +8,7 @@ turbo_ram
 jamsoftelectronula_tb2
 tm4164ea3_64k_w4
 *.ghw
+saa5050
+saa5050_rom_dual_port
+saa5050_rom_dual_port_uninitialized
+JamSoftElectronULA_config_medium.bin

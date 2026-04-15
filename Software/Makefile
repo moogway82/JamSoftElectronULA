@@ -9,11 +9,17 @@ GHDL: $(SOURCES)
 	$(OSSCADBINPATH)/ghdl -e TM4164EA3_64k_W4
 	$(OSSCADBINPATH)/ghdl -a turbo_ram.vhd
 	$(OSSCADBINPATH)/ghdl -e turbo_ram
-	$(OSSCADBINPATH)/ghdl -a JamSoftElectronULA.vhd
-	$(OSSCADBINPATH)/ghdl -e JamSoftElectronULA
+	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050_rom_dual_port.vhd
+	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050_rom_dual_port 
+	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050_rom_dual_port_uninitialized.vhd
+	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050_rom_dual_port_uninitialized 
+	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050.vhd
+	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050 
+	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit JamSoftElectronULA.vhd
+	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit JamSoftElectronULA
 
 JamSoftElectronULA.bin: GHDL
-	$(OSSCADBINPATH)/yosys -m ghdl -p 'ghdl JamSoftElectronULA; synth_ice40 -json JamSoftElectronULA.json'
+	$(OSSCADBINPATH)/yosys -m ghdl -p 'ghdl -fsynopsys -fexplicit JamSoftElectronULA; synth_ice40 -json JamSoftElectronULA.json'
 	$(OSSCADBINPATH)/nextpnr-ice40 --freq 16 --hx1k --package vq100 --asc JamSoftElectronULA.asc --json JamSoftElectronULA.json --pcf JamSoftElectronULA.pcf
 	$(OSSCADBINPATH)/icepack JamSoftElectronULA.asc JamSoftElectronULA.bin
 
@@ -27,9 +33,9 @@ JamSoftElectronULA_64k.bin: JamSoftElectronULA.bin
 	dd if=/dev/zero ibs=1 count=33316 | LC_ALL=C tr "\000" "\377" >> JamSoftElectronULA_64k.bin
 
 test: GHDL
-	$(OSSCADBINPATH)/ghdl -a JamSoftElectronULA_TB2.vhd 
-	$(OSSCADBINPATH)/ghdl -e JamSoftElectronULA_TB2
-	$(OSSCADBINPATH)/ghdl -r JamSoftElectronULA_TB2 --wave=JamSoftElectronULA_TB2_10.ghw --ieee-asserts=disable --read-wave-opt=wave-opts # --stop-time=150ms
+	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit JamSoftElectronULA_TB2.vhd 
+	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit JamSoftElectronULA_TB2
+	$(OSSCADBINPATH)/ghdl -r -fsynopsys -fexplicit JamSoftElectronULA_TB2 --wave=JamSoftElectronULA_TB2_10.ghw --ieee-asserts=disable #--read-wave-opt=wave-opts # --stop-time=150ms
 
 view:
 	surfer JamSoftElectronULA_TB2_10.ghw -s mode7.surf.ron > /dev/null &

@@ -19,7 +19,8 @@ use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
     generic (
-        IncludeMode7  : boolean := true
+        IncludeMode7  : boolean := true;
+        IncludeTurbo  : boolean := false
     );
     port (
         clk_16M00 : in  std_logic;
@@ -241,6 +242,20 @@ architecture behavioral of JamSoftElectronULA is
   signal DRAMC_PS, DRAMC_NS : dramc_fsm_type;
   --signal DRAMC_PS_DEBUG, DRAMC_NS_DEBUG : std_logic_vector(3 downto 0);
 
+  signal ttxt_clock : std_logic;
+  signal ttxt_clken : std_logic;
+  signal ttxt_glr : std_logic;
+  signal ttxt_dew : std_logic;
+  signal ttxt_crs : std_logic;
+  signal ttxt_lose : std_logic;
+  signal ttxt_r_int : std_logic;
+  signal ttxt_g_int : std_logic;
+  signal ttxt_b_int : std_logic;
+  signal char_rom_we : std_logic;
+  signal char_rom_addr : std_logic_vector(11 downto 0);
+  signal char_rom_data : std_logic_vector(7 downto 0);
+  signal ttxt_clk_count : unsigned(3 downto 0) := (others => '0');
+
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
 begin
@@ -277,16 +292,18 @@ begin
 
     not_cpu_clk <= not cpu_clk;
 
-    -- Turbo RAM using 8K Block RAM on FPGA
-    ula : entity work.turbo_ram 
-    port map(
-        addr => addr(12 downto 0),
-        write_en => turbo_we,
-        wclk => not_cpu_clk,
-        rclk => cpu_clk,
-        din => data_in,
-        dout => block_ram_data
-    );
+    TurboIncluded: if IncludeTurbo generate 
+      -- Turbo RAM using 8K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      port map(
+          addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
 
     -- TESTING PIN - This will change depending on what I need to check
     testing_pin <= '0';
@@ -612,7 +629,7 @@ begin
                         end if;
                     end if;
                     -- Detect "2" being pressed: Turbo Speed
-                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') then
+                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') and IncludeTurbo = true then
                         turbo <= '1';
                     end if;
 
@@ -1065,9 +1082,12 @@ begin
 
     end process;
 
-    red   <= red_int;
-    green <= green_int;
-    blue  <= blue_int;
+    red   <=  ttxt_r_int when mode_ttxt = '1' else
+              red_int;
+    green <=  ttxt_g_int when mode_ttxt = '1' else
+              green_int;
+    blue  <=  ttxt_b_int when mode_ttxt = '1' else
+              blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     HS_n  <= hsync_int;
 
@@ -1432,6 +1452,67 @@ begin
 
     ram_we  <= dram_we_int;
     ram_nRW <= not dram_we_int;
+
+    -- 
+    -- Mode 7
+    -- 
+
+    Mode7Included: if IncludeMode7 generate
+
+      p_gen_ttxt_clken : process(clk_16M00, RST_IN_n)
+      begin
+        if RST_IN_n = '0' then
+            ttxt_clk_count <= (others => '0');
+            ttxt_clken <= '0';
+        elsif rising_edge(clk_16M00) then
+            -- Reset counter every 8 cycles (0 to 7)
+            if ttxt_clk_count = 7 then
+                ttxt_clk_count <= (others => '0');
+            else
+                ttxt_clk_count <= ttxt_clk_count + 1;
+            end if;
+
+            -- Pulse high on 3 specific cycles to spread them out
+            -- This gives an average frequency of 6MHz
+            if (ttxt_clk_count = 0 or ttxt_clk_count = 3 or ttxt_clk_count = 6) then
+                ttxt_clken <= '1';
+            else
+                ttxt_clken <= '0';
+            end if;
+        end if;
+      end process p_gen_ttxt_clken;
+
+      teletext : entity work.saa5050
+        generic map (
+          IncludeTTxtROM => true
+        )
+        port map (
+          -- inputs
+          CLOCK    => clk_16M00, --16Mhz?
+          CLKEN    => ttxt_clken, --6MHz?
+          nRESET   => RST_IN_n,
+          DI_CLOCK => clk_16M00,
+          DI_CLKEN => '1',
+          DI       => screen_data(6 downto 0),
+          GLR      => '0', -- not used
+          DEW      => ttxt_dew,
+          CRS      => ttxt_crs,
+          LOSE     => ttxt_lose,
+          -- outputs
+          R        => ttxt_r_int,
+          G        => ttxt_g_int,
+          B        => ttxt_b_int,
+          -- SAA5050 character ROM loading
+          char_rom_we   => char_rom_we,
+          char_rom_addr => char_rom_addr,
+          char_rom_data => char_rom_data
+        );
+
+      ttxt_lose <= '1' when h_count < h_active else '0';
+      ttxt_crs <= field;
+      ttxt_dew <= not vsync_int;
+
+    end generate;
 
 
     -- DEBUGGING FSM STATES
