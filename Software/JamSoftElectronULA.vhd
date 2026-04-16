@@ -244,6 +244,7 @@ architecture behavioral of JamSoftElectronULA is
 
   signal ttxt_clock : std_logic;
   signal ttxt_clken : std_logic;
+  signal ttxt_di : std_logic_vector(6 downto 0);
   signal ttxt_glr : std_logic;
   signal ttxt_dew : std_logic;
   signal ttxt_crs : std_logic;
@@ -254,7 +255,6 @@ architecture behavioral of JamSoftElectronULA is
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
-  signal ttxt_clk_count : unsigned(3 downto 0) := (others => '0');
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -920,10 +920,12 @@ begin
           -- Pixels start being plotted on a row at h_count=0 so need to have the 
           -- Screen Data ready for then.
           -- RGB Data
-          if (h_count >= h_active or 
+          if (
+            h_count >= h_active or 
             (mode_text = '0' and v_count >= v_active_gph) or 
             (mode_text = '1' and v_count >= v_active_txt) or 
-            unsigned(char_row) >= 8) then
+            (unsigned(char_row) >= 8 and mode_ttxt = '0')
+            ) then
               -- blanking and border are always black
               red_int   <= '0';
               green_int <= '0';
@@ -1460,25 +1462,28 @@ begin
     Mode7Included: if IncludeMode7 generate
 
       p_gen_ttxt_clken : process(clk_16M00, RST_IN_n)
+        variable ttxt_clk_count : unsigned(3 downto 0) := (others => '0');
       begin
         if RST_IN_n = '0' then
-            ttxt_clk_count <= (others => '0');
+            ttxt_clk_count := (others => '0');
             ttxt_clken <= '0';
         elsif rising_edge(clk_16M00) then
-            -- Reset counter every 8 cycles (0 to 7)
-            if ttxt_clk_count = 7 then
-                ttxt_clk_count <= (others => '0');
-            else
-                ttxt_clk_count <= ttxt_clk_count + 1;
-            end if;
+          ttxt_clken <= not ttxt_clken;
 
-            -- Pulse high on 3 specific cycles to spread them out
-            -- This gives an average frequency of 6MHz
-            if (ttxt_clk_count = 0 or ttxt_clk_count = 3 or ttxt_clk_count = 6) then
-                ttxt_clken <= '1';
-            else
-                ttxt_clken <= '0';
-            end if;
+          ---- Reset counter every 8 cycles (0 to 7)
+          if ttxt_clk_count = 7 then
+              ttxt_clk_count := (others => '0');
+          else
+              ttxt_clk_count := ttxt_clk_count + 1;
+          end if;
+
+          ---- Pulse high on 3 specific cycles to spread them out
+          ---- This gives an average frequency of 6MHz
+          if (ttxt_clk_count = 0 or ttxt_clk_count = 3 or ttxt_clk_count = 6) then
+              ttxt_clken <= '1';
+          else
+              ttxt_clken <= '0';
+          end if;
         end if;
       end process p_gen_ttxt_clken;
 
@@ -1488,12 +1493,12 @@ begin
         )
         port map (
           -- inputs
-          CLOCK    => clk_16M00, --16Mhz?
-          CLKEN    => ttxt_clken, --6MHz?
+          CLOCK    => clk_16M00, --16Mhz
+          CLKEN    => ttxt_clken,--ttxt_clken, --6Mhz
           nRESET   => RST_IN_n,
           DI_CLOCK => clk_16M00,
-          DI_CLKEN => '1',
-          DI       => screen_data(6 downto 0),
+          DI_CLKEN => '1', --1MHz nah probably not needed?
+          DI       => ttxt_di,
           GLR      => '0', -- not used
           DEW      => ttxt_dew,
           CRS      => ttxt_crs,
@@ -1502,12 +1507,13 @@ begin
           R        => ttxt_r_int,
           G        => ttxt_g_int,
           B        => ttxt_b_int,
-          -- SAA5050 character ROM loading
+          -- SAA5050 character ROM loading - not needed...
           char_rom_we   => char_rom_we,
           char_rom_addr => char_rom_addr,
           char_rom_data => char_rom_data
         );
 
+      ttxt_di <= screen_data(6 downto 0);
       ttxt_lose <= '1' when h_count < h_active else '0';
       ttxt_crs <= field;
       ttxt_dew <= not vsync_int;

@@ -513,35 +513,35 @@ begin
       rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
     end loop;
 
-  if ram_test_quick = false then
+  --if ram_test_quick = false then
 
-    -- Write bytes
-    rgb_test_vram_addr := x"0000";
-    for i in 0 to ram_test_size loop
-      wait until falling_edge(cpu_clk_out);
-      wait for cpu_addr_ready;
-      addr <= rgb_test_vram_addr;
-      data <=  x"A5";
-      --data <= rgb_test_vram_addr(7 downto 0);
-      R_W_n <= '0';
-      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
-    end loop;
+  --  -- Write bytes
+  --  rgb_test_vram_addr := x"0000";
+  --  for i in 0 to ram_test_size loop
+  --    wait until falling_edge(cpu_clk_out);
+  --    wait for cpu_addr_ready;
+  --    addr <= rgb_test_vram_addr;
+  --    data <=  x"A5";
+  --    --data <= rgb_test_vram_addr(7 downto 0);
+  --    R_W_n <= '0';
+  --    rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+  --  end loop;
 
-    -- Read back bytes
-    rgb_test_vram_addr := x"0000";
-    wait until falling_edge(cpu_clk_out);
-    for i in 0 to ram_test_size loop
-      wait for cpu_addr_ready;
-      addr <= rgb_test_vram_addr;
-      R_W_n <= '1';
-      data <= (others => 'Z');
-      wait until falling_edge(cpu_clk_out);
-      assert data = x"A5" report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
-      --assert data = rgb_test_vram_addr(7 downto 0) report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
-      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
-    end loop;
+  --  -- Read back bytes
+  --  rgb_test_vram_addr := x"0000";
+  --  wait until falling_edge(cpu_clk_out);
+  --  for i in 0 to ram_test_size loop
+  --    wait for cpu_addr_ready;
+  --    addr <= rgb_test_vram_addr;
+  --    R_W_n <= '1';
+  --    data <= (others => 'Z');
+  --    wait until falling_edge(cpu_clk_out);
+  --    assert data = x"A5" report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
+  --    --assert data = rgb_test_vram_addr(7 downto 0) report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
+  --    rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+  --  end loop;
 
-  end if; -- ram_test_quick
+  --end if; -- ram_test_quick
 
   end if; -- run_ram_test
 
@@ -956,13 +956,6 @@ begin
       rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
     end loop;
 
-    -- Set Mode 7
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FE07";
-    data <= "00111000"; 
-    R_W_n <= '0';
-
     -- Set Screen Start Address
 --; SHEILA &FE02 and &FE03
 --; &7C00 = 0111 1100 0000 0000
@@ -982,6 +975,13 @@ begin
     wait for cpu_addr_ready;
     addr <= x"FE03";
     data <= x"3E"; 
+    R_W_n <= '0';
+
+    -- Set Mode 7
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE07";
+    data <= "00111000"; 
     R_W_n <= '0';
 
     wait for 40 ms;

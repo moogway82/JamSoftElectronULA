@@ -27,11 +27,8 @@
         active_scope: Some(WaveScope((
             strs: [
                 "jamsoftelectronula_tb2",
-                "ula",
-                "mode7included",
-                "teletext",
             ],
-            id: Wellen((11)),
+            id: Wellen((7)),
         ))),
         items_tree: (
             items: [
@@ -43,6 +40,18 @@
                 ),
                 (
                     item_ref: (29),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
+                    item_ref: (78),
+                    level: 0,
+                    unfolded: true,
+                    selected: false,
+                ),
+                (
+                    item_ref: (79),
                     level: 0,
                     unfolded: true,
                     selected: false,
@@ -200,96 +209,6 @@
             ],
         ),
         displayed_items: {
-            (72): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                            "mode7included",
-                            "teletext",
-                        ],
-                        id: Wellen((11)),
-                    ),
-                    name: "clock",
-                    id: Wellen((172)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "clock",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (75): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                            "mode7included",
-                            "teletext",
-                        ],
-                        id: Wellen((11)),
-                    ),
-                    name: "r",
-                    id: Wellen((182)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "r",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (48): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "mode_ttxt",
-                    id: Wellen((104)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "mode_ttxt",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (76): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                            "mode7included",
-                            "teletext",
-                        ],
-                        id: Wellen((11)),
-                    ),
-                    name: "g",
-                    id: Wellen((183)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "g",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
             (37): Variable((
                 variable_ref: (
                     path: (
@@ -305,48 +224,6 @@
                 color: None,
                 background_color: None,
                 display_name: "cas_n",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (53): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "last_line",
-                    id: Wellen((105)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "last_line",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (30): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "vsync_int",
-                    id: Wellen((59)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "vsync_int",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -376,7 +253,7 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (66): Variable((
+            (75): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -387,42 +264,60 @@
                         ],
                         id: Wellen((11)),
                     ),
-                    name: "di_clken",
-                    id: Wellen((176)),
+                    name: "r",
+                    id: Wellen((182)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "di_clken",
+                display_name: "r",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (65): Variable((
+            (29): Variable((
                 variable_ref: (
                     path: (
                         strs: [
                             "jamsoftelectronula_tb2",
                             "ula",
-                            "mode7included",
-                            "teletext",
                         ],
-                        id: Wellen((11)),
+                        id: Wellen((8)),
                     ),
-                    name: "dew",
-                    id: Wellen((179)),
+                    name: "addr",
+                    id: Wellen((30)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "dew",
+                display_name: "addr [15:0]",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (67): Variable((
+            (78): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                        ],
+                        id: Wellen((7)),
+                    ),
+                    name: "data",
+                    id: Wellen((21)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "data [7:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (72): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -433,12 +328,54 @@
                         ],
                         id: Wellen((11)),
                     ),
-                    name: "di_clock",
-                    id: Wellen((175)),
+                    name: "clock",
+                    id: Wellen((172)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "di_clock",
+                display_name: "clock",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (47): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                        ],
+                        id: Wellen((8)),
+                    ),
+                    name: "cpu_clk",
+                    id: Wellen((138)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "cpu_clk",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (39): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                        ],
+                        id: Wellen((8)),
+                    ),
+                    name: "cpu_ram_slot",
+                    id: Wellen((143)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "cpu_ram_slot",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -468,7 +405,7 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (29): Variable((
+            (50): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -477,12 +414,12 @@
                         ],
                         id: Wellen((8)),
                     ),
-                    name: "addr",
-                    id: Wellen((30)),
+                    name: "char_row",
+                    id: Wellen((94)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "addr [15:0]",
+                display_name: "char_row [3:0]",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -512,6 +449,49 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
+            (79): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                        ],
+                        id: Wellen((7)),
+                    ),
+                    name: "r_w_n",
+                    id: Wellen((2)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "r_w_n",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (65): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                            "mode7included",
+                            "teletext",
+                        ],
+                        id: Wellen((11)),
+                    ),
+                    name: "dew",
+                    id: Wellen((179)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "dew",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
             (31): Variable((
                 variable_ref: (
                     path: (
@@ -527,113 +507,6 @@
                 color: None,
                 background_color: None,
                 display_name: "hsync_int",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (74): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                            "mode7included",
-                            "teletext",
-                        ],
-                        id: Wellen((11)),
-                    ),
-                    name: "y",
-                    id: Wellen((185)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "y",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (47): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "cpu_clk",
-                    id: Wellen((138)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "cpu_clk",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (50): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "char_row",
-                    id: Wellen((94)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "char_row [3:0]",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (39): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "cpu_ram_slot",
-                    id: Wellen((143)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "cpu_ram_slot",
-                display_name_type: Unique,
-                manual_name: None,
-                format: None,
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (46): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                        ],
-                        id: Wellen((8)),
-                    ),
-                    name: "dramc_ps",
-                    id: Wellen((157)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "dramc_ps",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -661,7 +534,7 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (51): Variable((
+            (46): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -670,35 +543,12 @@
                         ],
                         id: Wellen((8)),
                     ),
-                    name: "row_addr_debug",
-                    id: Wellen((98)),
+                    name: "dramc_ps",
+                    id: Wellen((157)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "row_addr_debug [14:6]",
-                display_name_type: Unique,
-                manual_name: None,
-                format: Some("Binary"),
-                field_formats: [],
-                height_scaling_factor: None,
-            )),
-            (73): Variable((
-                variable_ref: (
-                    path: (
-                        strs: [
-                            "jamsoftelectronula_tb2",
-                            "ula",
-                            "mode7included",
-                            "teletext",
-                        ],
-                        id: Wellen((11)),
-                    ),
-                    name: "clken",
-                    id: Wellen((173)),
-                ),
-                color: None,
-                background_color: None,
-                display_name: "clken",
+                display_name: "dramc_ps",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
@@ -726,7 +576,7 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (32): Variable((
+            (48): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -735,19 +585,19 @@
                         ],
                         id: Wellen((8)),
                     ),
-                    name: "screen_addr",
-                    id: Wellen((95)),
+                    name: "mode_ttxt",
+                    id: Wellen((104)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "screen_addr [14:0]",
+                display_name: "mode_ttxt",
                 display_name_type: Unique,
                 manual_name: None,
                 format: None,
                 field_formats: [],
                 height_scaling_factor: None,
             )),
-            (49): Variable((
+            (51): Variable((
                 variable_ref: (
                     path: (
                         strs: [
@@ -756,12 +606,12 @@
                         ],
                         id: Wellen((8)),
                     ),
-                    name: "byte_addr_debug",
-                    id: Wellen((99)),
+                    name: "row_addr_debug",
+                    id: Wellen((98)),
                 ),
                 color: None,
                 background_color: None,
-                display_name: "byte_addr_debug [14:3]",
+                display_name: "row_addr_debug [14:6]",
                 display_name_type: Unique,
                 manual_name: None,
                 format: Some("Binary"),
@@ -791,12 +641,211 @@
                 field_formats: [],
                 height_scaling_factor: None,
             )),
+            (66): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                            "mode7included",
+                            "teletext",
+                        ],
+                        id: Wellen((11)),
+                    ),
+                    name: "di_clken",
+                    id: Wellen((176)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "di_clken",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (73): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                            "mode7included",
+                            "teletext",
+                        ],
+                        id: Wellen((11)),
+                    ),
+                    name: "clken",
+                    id: Wellen((173)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "clken",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (30): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                        ],
+                        id: Wellen((8)),
+                    ),
+                    name: "vsync_int",
+                    id: Wellen((59)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "vsync_int",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (67): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                            "mode7included",
+                            "teletext",
+                        ],
+                        id: Wellen((11)),
+                    ),
+                    name: "di_clock",
+                    id: Wellen((175)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "di_clock",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (74): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                            "mode7included",
+                            "teletext",
+                        ],
+                        id: Wellen((11)),
+                    ),
+                    name: "y",
+                    id: Wellen((185)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "y",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (76): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                            "mode7included",
+                            "teletext",
+                        ],
+                        id: Wellen((11)),
+                    ),
+                    name: "g",
+                    id: Wellen((183)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "g",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (49): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                        ],
+                        id: Wellen((8)),
+                    ),
+                    name: "byte_addr_debug",
+                    id: Wellen((99)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "byte_addr_debug [14:3]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: Some("Binary"),
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (53): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                        ],
+                        id: Wellen((8)),
+                    ),
+                    name: "last_line",
+                    id: Wellen((105)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "last_line",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
+            (32): Variable((
+                variable_ref: (
+                    path: (
+                        strs: [
+                            "jamsoftelectronula_tb2",
+                            "ula",
+                        ],
+                        id: Wellen((8)),
+                    ),
+                    name: "screen_addr",
+                    id: Wellen((95)),
+                ),
+                color: None,
+                background_color: None,
+                display_name: "screen_addr [14:0]",
+                display_name_type: Unique,
+                manual_name: None,
+                format: None,
+                field_formats: [],
+                height_scaling_factor: None,
+            )),
         },
-        display_item_ref_counter: 77,
+        display_item_ref_counter: 79,
         viewports: [
             (
-                curr_left: (0.7489532742160513),
-                curr_right: (0.823732511588449),
+                curr_left: (0.6280768089243504),
+                curr_right: (0.6281687297651675),
                 target_left: (0.12096463607761689),
                 target_right: (0.12284738302604249),
                 move_start_left: (0.12096463607761689),
@@ -806,11 +855,11 @@
             ),
         ],
         cursor: Some((1, [
-            3803881429,
-            31086,
+            730749328,
+            15732,
         ])),
         markers: {},
-        focused_item: Some((14)),
+        focused_item: Some((12)),
         focused_transaction: (None, None),
         default_variable_name_type: Unique,
         scroll_offset: 0.0,

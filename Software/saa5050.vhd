@@ -124,14 +124,14 @@ signal disp_enable_latch    :   std_logic;
 -- Row and column addressing is handled externally.  We just need to
 -- keep track of which of the 10 lines we are on within the character...
 signal line_counter :   unsigned(3 downto 0);
--- ... and which of the 12 pixels we are on within each line
-signal pixel_counter :  unsigned(3 downto 0);
+-- ... and which of the 6 pixels we are on within each line
+signal pixel_counter :  unsigned(2 downto 0);
 -- We also need to count frames to implement the flash feature.
 -- The datasheet says this is 0.75 Hz with a 3:1 on/off ratio, so it
 -- is probably a /64 counter, which gives us 0.78 Hz
 signal flash_counter :  unsigned(5 downto 0);
 -- Output shift register
-signal shift_reg    :   std_logic_vector(11 downto 0);
+signal shift_reg    :   std_logic_vector(5 downto 0);
 
 -- Flash mask
 signal flash        :   std_logic;
@@ -249,8 +249,8 @@ begin
                     double_high1 <= '1';
                 end if;
 
-                -- Count pixels between 0 and 11
-                if pixel_counter = 11 then
+                -- Count pixels between 0 and 5
+                if pixel_counter = 5 then
                     -- Start of next character and delayed display enable
                     pixel_counter <= (others => '0');
                     disp_enable <= lose_latch;
@@ -262,7 +262,7 @@ begin
                 if lose_r = '1' and lose_latch = '0' then
                     -- Reset pixel counter - small offset to make the output
                     -- line up with the cursor from the video ULA
-                    pixel_counter <= "0010";
+                    pixel_counter <= "011";
                 end if;
 
                 -- Count frames on end of VSYNC (falling edge of DEW)
@@ -514,9 +514,13 @@ begin
     --------------------------------------------------------------------
     -- Shift register
     --------------------------------------------------------------------
+    -- TODO: Switch back to 5MHz
+    -- - Halve pixel counter & shift reg and A & B
+    -- - Stop doubling up pixels from the ROM
+    -- - Change shift
     process(CLOCK,nRESET)
-    variable a : std_logic_vector(11 downto 0);
-    variable b : std_logic_vector(11 downto 0);
+    variable a : std_logic_vector(5 downto 0);
+    variable b : std_logic_vector(5 downto 0);
     begin
         if nRESET = '0' then
             shift_reg <= (others => '0');
@@ -525,21 +529,11 @@ begin
                 if disp_enable_r = '1' and pixel_counter = 0 then
                     -- Character rounding
 
-                    -- a is the current row of pixels, doubled up
-                    a := rom_data1(5) & rom_data1(5) &
-                         rom_data1(4) & rom_data1(4) &
-                         rom_data1(3) & rom_data1(3) &
-                         rom_data1(2) & rom_data1(2) &
-                         rom_data1(1) & rom_data1(1) &
-                         rom_data1(0) & rom_data1(0);
+                    -- a is the current row of pixels
+                    a := rom_data1(5 downto 0);
 
-                    -- b is the adjacent row of pixels, doubled up
-                    b := rom_data2(5) & rom_data2(5) &
-                         rom_data2(4) & rom_data2(4) &
-                         rom_data2(3) & rom_data2(3) &
-                         rom_data2(2) & rom_data2(2) &
-                         rom_data2(1) & rom_data2(1) &
-                         rom_data2(0) & rom_data2(0);
+                    -- b is the adjacent row of pixels
+                    b := rom_data2(5 downto 0);
 
                     -- If bit 7 of the ROM data is set then this is a graphics
                     -- character and separated/hold graphics modes apply.
@@ -548,19 +542,21 @@ begin
                     if rom_data1(7) = '1' then
                         -- Apply a mask for separated graphics mode
                         if (hold_active = '0' and gfx_sep = '1') or (hold_active = '1' and last_gfx_sep = '1') then
-                            a(10) := '0';
-                            a(11) := '0';
-                            a(4) := '0';
                             a(5) := '0';
+                            a(2) := '0';
                             if line_counter = 2 or line_counter = 6 or line_counter = 9 then
                                 a := (others => '0');
                             end if;
                         end if;
                     else
+                        -- TODO: Bring rounding back - I've just commented this bit out for now
+                        -- until I understand how to go from 12MHz to 6MHz pixel clock but do 
+                        -- rounding...
+                        --
                         -- Perform character rounding on alpha-numeric characters
-                        a := a or
-                            (('0' & a(11 downto 1)) and b and not('0' & b(11 downto 1))) or
-                            ((a(10 downto 0) & '0') and b and not(b(10 downto 0) & '0'));
+                        --a := a or
+                        --    (('0' & a(11 downto 1)) and b and not('0' & b(11 downto 1))) or
+                        --    ((a(10 downto 0) & '0') and b and not(b(10 downto 0) & '0'));
                     end if;
 
                     -- Load the shift register with the ROM bit pattern
@@ -569,7 +565,7 @@ begin
 
                 else
                     -- Pump the shift register
-                    shift_reg <= shift_reg(10 downto 0) & "0";
+                    shift_reg <= shift_reg(4 downto 0) & "0";
                 end if;
             end if;
         end if;
@@ -588,7 +584,7 @@ begin
             B <= '0';
         elsif rising_edge(CLOCK) then
             if CLKEN = '1' then
-                pixel := shift_reg(11) and not ((flash and is_flash_r) or conceal_r);
+                pixel := shift_reg(5) and not ((flash and is_flash_r) or conceal_r);
 
                 -- Generate mono output
                 Y <= pixel;
