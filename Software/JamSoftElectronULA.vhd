@@ -1500,9 +1500,9 @@ begin
           DI_CLKEN => '1', --1MHz nah probably not needed?
           DI       => ttxt_di,
           GLR      => '0', -- not used
-          DEW      => ttxt_dew,
+          DEW      => ttxt_dew, --VSYNC, Resets the Line Counter to 0, this isn't when the ULA sets its char_row to 0 tho...
           CRS      => ttxt_crs,
-          LOSE     => ttxt_lose,
+          LOSE     => ttxt_lose, --ttxt_lose looks very wrong - needs to be 0-40 characters on active scanlines
           -- outputs
           R        => ttxt_r_int,
           G        => ttxt_g_int,
@@ -1514,7 +1514,7 @@ begin
         );
 
       ttxt_di <= screen_data(6 downto 0);
-      ttxt_lose <= '1' when h_count < h_active else '0';
+      ttxt_lose <= '1' when (h_count < h_active) and (v_count < v_active_txt) else '0';
       ttxt_crs <= field;
       ttxt_dew <= not vsync_int;
 
