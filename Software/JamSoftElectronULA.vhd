@@ -252,6 +252,7 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_r_int : std_logic;
   signal ttxt_g_int : std_logic;
   signal ttxt_b_int : std_logic;
+  signal crtc_reg_addr : std_logic_vector(2 downto 0);
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
@@ -459,6 +460,7 @@ begin
                ctrl_caps       <= '0';
                turbo           <= '0';
                mode_ttxt       <= '0';
+               crtc_reg_addr   <= (others => '0');
 
             else
  
@@ -631,6 +633,34 @@ begin
                     -- Detect "2" being pressed: Turbo Speed
                     if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') and IncludeTurbo = true then
                         turbo <= '1';
+                    end if;
+
+                    -- JafaMk1 Compatibility
+                    -- Setting the CRTC Address Register
+                    if (addr = x"fc1c" and IncludeMode7 = true) then
+                        if (R_W_n = '0') then
+                            crtc_reg_addr <= data_in(2 downto 0);
+                        end if;
+                    end if;
+                    -- Data for the CRTC Registers
+                    if (addr = x"fc1d" and IncludeMode7 = true) then
+                        if (R_W_n = '0') then
+                            case crtc_reg_addr is
+                            when "010" => -- R12: Screen Start Address (H)
+                                screen_base(14 downto 8) <= mode_ttxt & data_in(5 downto 0); --6845 doesn't have MA14, putting a '1' if in mode 7
+                                -- Activate Mode 7 if MA13 is set
+                                if (screen_base(13) = '1') then
+                                    mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
+                                    mode_bpp     <= "00";
+                                    mode_40      <= '1';
+                                    mode_text    <= '1';
+                                    mode_ttxt    <= '1';
+                                end if;
+                            when "011" => -- R13: Streen Start Address (L)
+                                screen_base(7 downto 3) <= data_in(7 downto 3); --Don't use the lower bits on an Elk
+                            when others =>
+                            end case;
+                        end if;
                     end if;
 
                     if (addr(15 downto 8) = x"FE") then
