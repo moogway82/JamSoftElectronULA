@@ -753,6 +753,18 @@ begin
                                     isr(4) <= '1';
                                 end if;
 
+                            when others =>
+                                -- A '1' in the palatte data means disable the colour
+                                -- Invert the stored palette, to make the palette logic simpler
+                                palette(slv2int(addr(2 downto 0))) <= data_in xor "11111111";
+                            end case;
+                        end if;
+                    end if;
+
+                    if (addr(15 downto 8) = x"FC") then
+                        if (R_W_n = '0') then
+                            case addr(3 downto 0) is
+
                             when x"C" =>
 
                                 crtc_reg_addr <= data_in;
@@ -776,12 +788,10 @@ begin
                               end if;
 
                             when others =>
-                                -- A '1' in the palatte data means disable the colour
-                                -- Invert the stored palette, to make the palette logic simpler
-                                palette(slv2int(addr(2 downto 0))) <= data_in xor "11111111";
                             end case;
                         end if;
                     end if;
+
                 end if;
             end if;
         end if;

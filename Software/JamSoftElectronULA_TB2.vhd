@@ -1053,28 +1053,28 @@ begin
     -- 6845ish reg address reg fc1c
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
-    addr <= x"FE1C";
+    addr <= x"FC1C";
     data <= x"0C"; -- &12
     R_W_n <= '0';
 
     -- 6845ish reg data reg fc1d
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
-    addr <= x"FE1D";
+    addr <= x"FC1D";
     data <= x"7C"; -- &3000
     R_W_n <= '0';
 
     -- 6845ish reg address reg fc1c
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
-    addr <= x"FE1C";
+    addr <= x"FC1C";
     data <= x"0D"; -- &13
     R_W_n <= '0';
 
     -- 6845ish reg data reg fc1d
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
-    addr <= x"FE1D";
+    addr <= x"FC1D";
     data <= x"28"; -- &3000
     R_W_n <= '0';
 
