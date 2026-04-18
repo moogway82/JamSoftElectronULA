@@ -131,7 +131,7 @@ signal pixel_counter :  unsigned(2 downto 0);
 -- is probably a /64 counter, which gives us 0.78 Hz
 signal flash_counter :  unsigned(5 downto 0);
 -- Output shift register
-signal shift_reg    :   std_logic_vector(11 downto 0);
+signal shift_reg    :   std_logic_vector(5 downto 0);
 
 -- Flash mask
 signal flash        :   std_logic;
@@ -519,8 +519,8 @@ begin
     -- - Stop doubling up pixels from the ROM
     -- - Change shift
     process(CLOCK,nRESET)
-    variable a : std_logic_vector(11 downto 0);
-    variable b : std_logic_vector(11 downto 0);
+    variable a : std_logic_vector(5 downto 0);
+    variable b : std_logic_vector(5 downto 0);
     begin
         if nRESET = '0' then
             shift_reg <= (others => '0');
@@ -529,21 +529,11 @@ begin
                 if disp_enable_r = '1' and pixel_counter = 0 then
                     -- Character rounding
 
-                    -- a is the current row of pixels, doubled up
-                    a := rom_data1(5) & rom_data1(5) &
-                         rom_data1(4) & rom_data1(4) &
-                         rom_data1(3) & rom_data1(3) &
-                         rom_data1(2) & rom_data1(2) &
-                         rom_data1(1) & rom_data1(1) &
-                         rom_data1(0) & rom_data1(0);
+                    -- a is the current row of pixels
+                    a := rom_data1(5 downto 0);
 
-                    -- b is the adjacent row of pixels, doubled up
-                    b := rom_data2(5) & rom_data2(5) &
-                         rom_data2(4) & rom_data2(4) &
-                         rom_data2(3) & rom_data2(3) &
-                         rom_data2(2) & rom_data2(2) &
-                         rom_data2(1) & rom_data2(1) &
-                         rom_data2(0) & rom_data2(0);
+                    -- b is the adjacent row of pixels
+                    b := rom_data2(5 downto 0);
 
                     -- If bit 7 of the ROM data is set then this is a graphics
                     -- character and separated/hold graphics modes apply.
@@ -552,10 +542,8 @@ begin
                     if rom_data1(7) = '1' then
                         -- Apply a mask for separated graphics mode
                         if (hold_active = '0' and gfx_sep = '1') or (hold_active = '1' and last_gfx_sep = '1') then
-                            a(10) := '0';
-                            a(11) := '0';
-                            a(4) := '0';
                             a(5) := '0';
+                            a(2) := '0';
                             if line_counter = 2 or line_counter = 6 or line_counter = 9 then
                                 a := (others => '0');
                             end if;
@@ -564,12 +552,17 @@ begin
                         -- TODO: Bring rounding back - I've just commented this bit out for now
                         -- until I understand how to go from 12MHz to 6MHz pixel clock but do 
                         -- rounding...
-                        -- Idea - double the A, B and Shift reg and output pixels on HIGH and LOW CLKEN
                         -- 
+--IF pixelWest=1 AND pixelSouth=1 AND pixelSW=0 THEN SetSWSubPixel()
+--IF pixelEast=1 AND pixelSouth=1 AND pixelSE=0 THEN SetSESubPixel()
+--IF pixelWest=1 AND pixelNorth=1 AND pixelNW=0 THEN SetNWSubPixel()
+--IF pixelEast=1 AND pixelNorth=1 AND pixelNE=0 THEN SetNESubPixel()
+                        --
+                        --
                         -- Perform character rounding on alpha-numeric characters
-                        a := a or
-                            (('0' & a(11 downto 1)) and b and not('0' & b(11 downto 1))) or
-                            ((a(10 downto 0) & '0') and b and not(b(10 downto 0) & '0'));
+                        --a := a or
+                        --    (('0' & a(11 downto 1)) and b and not('0' & b(11 downto 1))) or
+                        --    ((a(10 downto 0) & '0') and b and not(b(10 downto 0) & '0'));
                     end if;
 
                     -- Load the shift register with the ROM bit pattern
@@ -577,8 +570,8 @@ begin
                     shift_reg <= a;
 
                 else
-                    -- Pump the shift register by two?
-                    shift_reg <= shift_reg(9 downto 0) & "00";
+                    -- Pump the shift register
+                    shift_reg <= shift_reg(4 downto 0) & "0";
                 end if;
             end if;
         end if;
@@ -597,23 +590,7 @@ begin
             B <= '0';
         elsif rising_edge(CLOCK) then
             if CLKEN = '1' then
-                pixel := shift_reg(11) and not ((flash and is_flash_r) or conceal_r);
-
-                -- Generate mono output
-                Y <= pixel;
-
-                -- Generate colour output
-                if pixel = '1' then
-                    R <= fg_r(0);
-                    G <= fg_r(1);
-                    B <= fg_r(2);
-                else
-                    R <= bg_r(0);
-                    G <= bg_r(1);
-                    B <= bg_r(2);
-                end if;
-            elsif CLKEN = '0' then
-                pixel := shift_reg(10) and not ((flash and is_flash_r) or conceal_r);
+                pixel := shift_reg(5) and not ((flash and is_flash_r) or conceal_r);
 
                 -- Generate mono output
                 Y <= pixel;

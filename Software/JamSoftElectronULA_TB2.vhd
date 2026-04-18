@@ -965,6 +965,7 @@ begin
 --; FE03 = X X A14 A13 A12 A11 A10 A9
 --; FE02 = 00000000 = &0
 --; FE03 = 00111110 = &3E
+-- 3E14 would be shifted down 1 line...
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FE02";
@@ -983,6 +984,36 @@ begin
     addr <= x"FE07";
     data <= "00111000"; 
     R_W_n <= '0';
+
+    wait for 40 ms;
+
+    -- Set Screen Start Address down 1 line
+--; SHEILA &FE02 and &FE03
+--; &7C00 = 0111 1100 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 111 110 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00111110 = &3E
+-- 3E14 would be shifted down 1 line...
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"14"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"3E"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= x"00"; 
+    R_W_n <= '1';
 
     wait for 40 ms;
 

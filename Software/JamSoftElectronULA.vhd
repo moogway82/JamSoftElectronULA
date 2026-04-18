@@ -110,7 +110,7 @@ architecture behavioral of JamSoftElectronULA is
   -- ULA Registers
   signal isr            : std_logic_vector(6 downto 2);
   signal ier            : std_logic_vector(6 downto 2);
-  signal screen_base    : std_logic_vector(14 downto 6);
+  signal screen_base    : std_logic_vector(14 downto 3);
   signal data_shift     : std_logic_vector(7 downto 0);
   signal page_enable    : std_logic;
   signal page           : std_logic_vector(2 downto 0);
@@ -645,7 +645,7 @@ begin
                                 ier(6 downto 2) <= data_in(6 downto 2);
                             when x"1" =>
                             when x"2" =>
-                                screen_base(8 downto 6) <= data_in(7 downto 5);
+                                screen_base(8 downto 3) <= data_in(7 downto 2);
                             when x"3" =>
                                 screen_base(14 downto 9) <= data_in(5 downto 0);
                             when x"4" =>
@@ -785,7 +785,7 @@ begin
     contention   <= '0' when  h_count >= h_active else
                     '0' when  (mode_text = '0' and v_count >= v_active_gph) else
                     '0' when  (mode_text = '1' and v_count >= v_active_txt) else
-                    '0' when  (unsigned(char_row) >= 8) else    -- TODO Mode7: This may not be true for Mode 7...
+                    '0' when  (unsigned(char_row) >= 8) and mode_ttxt = '0' else  
                     not mode_40;
 
     gen_video : process (clk_16M00,RST_IN_n)
@@ -836,7 +836,6 @@ begin
 
           -- Char_row counts 0..7 or 0..9 depending on the mode.
           -- It incremented on the trailing edge of hsync
-          -- TODO: Mode 7 need 10 lines, so normal text mode 0..9 then
           hsync_int_last <= hsync_int;
           if hsync_int = '1' and hsync_int_last = '0'  then
               if v_count = v_total then
@@ -875,11 +874,11 @@ begin
           -- bit confusing to remap
           if h_count = h_reset_addr and v_count = v_total then
               if mode_ttxt = '0' then
-                row_addr  := screen_base;
-                byte_addr := screen_base & "000";
+                row_addr  := screen_base(14 downto 6);
+                byte_addr := screen_base(14 downto 6) & "000";
               else 
-                row_addr  := screen_base(11 downto 6) & "000";
-                byte_addr := screen_base(11 downto 6) & "000000";
+                row_addr  := screen_base(11 downto 3);
+                byte_addr := screen_base(11 downto 3) & "000";
               end if;
           end if;
 
