@@ -1012,8 +1012,78 @@ begin
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"0000";
-    data <= x"00"; 
+    data <= (others => 'Z'); 
     R_W_n <= '1';
+
+    -- Back to Mode 2
+        -- Set Screen Start Address down 1 line
+--; SHEILA &FE02 and &FE03
+--; &7C00 = 0111 1100 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 111 110 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00111110 = &3E
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE07";
+    data <= "00010000"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"00"; -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"18";  -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= (others => 'Z'); 
+    R_W_n <= '1';
+
+    -- Now try setting Mode 7 using the Jafa regs - start address 7c00
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE1C";
+    data <= x"0C"; -- &12
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE1D";
+    data <= x"7C"; -- &3000
+    R_W_n <= '0';
+
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE1C";
+    data <= x"0D"; -- &13
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE1D";
+    data <= x"28"; -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= (others => 'Z'); 
+    R_W_n <= '1';
+
 
     wait for 40 ms;
 

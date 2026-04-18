@@ -252,7 +252,7 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_r_int : std_logic;
   signal ttxt_g_int : std_logic;
   signal ttxt_b_int : std_logic;
-  signal crtc_reg_addr : std_logic_vector(2 downto 0);
+  signal crtc_reg_addr : std_logic_vector(7 downto 0);
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
@@ -635,34 +635,6 @@ begin
                         turbo <= '1';
                     end if;
 
-                    -- JafaMk1 Compatibility
-                    -- Setting the CRTC Address Register
-                    if (addr = x"fc1c" and IncludeMode7 = true) then
-                        if (R_W_n = '0') then
-                            crtc_reg_addr <= data_in(2 downto 0);
-                        end if;
-                    end if;
-                    -- Data for the CRTC Registers
-                    if (addr = x"fc1d" and IncludeMode7 = true) then
-                        if (R_W_n = '0') then
-                            case crtc_reg_addr is
-                            when "010" => -- R12: Screen Start Address (H)
-                                screen_base(14 downto 8) <= mode_ttxt & data_in(5 downto 0); --6845 doesn't have MA14, putting a '1' if in mode 7
-                                -- Activate Mode 7 if MA13 is set
-                                if (screen_base(13) = '1') then
-                                    mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '1';
-                                    mode_ttxt    <= '1';
-                                end if;
-                            when "011" => -- R13: Streen Start Address (L)
-                                screen_base(7 downto 3) <= data_in(7 downto 3); --Don't use the lower bits on an Elk
-                            when others =>
-                            end case;
-                        end if;
-                    end if;
-
                     if (addr(15 downto 8) = x"FE") then
                         if (R_W_n = '1') then
                             -- Clear the RDFull interrupts on reading the data_shift register
@@ -780,6 +752,29 @@ begin
                                 if data_in(2 downto 1) = "10" then
                                     isr(4) <= '1';
                                 end if;
+
+                            when x"C" =>
+
+                                crtc_reg_addr <= data_in;
+
+                            when x"D" =>
+
+                              case crtc_reg_addr is
+                                when x"0C" =>
+                                  screen_base(14 downto 8) <= data_in(5) & data_in(5 downto 0);
+                                when x"0D" =>
+                                  screen_base(7 downto 3) <= data_in(7 downto 3);
+                                when others =>
+                              end case;
+
+                              if screen_base(13) = '1' then
+                                mode_base    <= "1111";
+                                mode_bpp     <= "00";
+                                mode_40      <= '1';
+                                mode_text    <= '1';
+                                mode_ttxt    <= '1';
+                              end if;
+
                             when others =>
                                 -- A '1' in the palatte data means disable the colour
                                 -- Invert the stored palette, to make the palette logic simpler
