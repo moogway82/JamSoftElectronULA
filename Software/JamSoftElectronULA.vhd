@@ -253,6 +253,7 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_g_int : std_logic;
   signal ttxt_b_int : std_logic;
   signal crtc_reg_addr : std_logic_vector(7 downto 0);
+  signal crtc_screen_start : std_logic_vector(13 downto 0);
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
@@ -371,6 +372,8 @@ begin
                 "0000" & (kbd xor "1111") when kbd_access = '1' else
                 isr_data                  when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"0" else
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
+                screen_base(8 downto 3) & "00"    when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"2" else
+                "00" & screen_base(14 downto 9)   when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"3" else
                 x"F1"; -- todo FIXEME
 
     -- Used to control the ULA's data bus buffer (ie, Level Shifting buffer so FPGA can handle 5V)
@@ -619,6 +622,21 @@ begin
                     casOut <= general_counter(12);
                 end if;
 
+                -- Set Mode 7 if Screen base(13) has been set to 
+                if crtc_screen_start(13) = '1' then
+                  mode_base    <= "1111";
+                  mode_bpp     <= "00";
+                  mode_40      <= '1';
+                  mode_text    <= '1';
+                  mode_ttxt    <= '1';
+                else
+                  mode_base    <= "1100";
+                  mode_bpp     <= "00";
+                  mode_40      <= '1';
+                  mode_text    <= '1';
+                  mode_ttxt    <= '0';
+                end if;
+
                 -- ULA Writes
                 if (cpu_clken = '1') then
 
@@ -729,11 +747,11 @@ begin
                                     mode_ttxt    <= '0';
                                 when "111" =>
                                     if IncludeMode7 = true then
-                                        mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
-                                        mode_bpp     <= "00";
-                                        mode_40      <= '1';
-                                        mode_text    <= '1';
-                                        mode_ttxt    <= '1';
+                                        mode_base    <= "1111"; -- Not used in Mode 7
+                                        mode_bpp     <= "00";   -- Not used in Mode 7
+                                        mode_40      <= '1';    -- Used in Mode 7
+                                        mode_text    <= '1';    -- Used in Mode 7
+                                        mode_ttxt    <= '1';    -- Used in Mode 7
                                     else 
                                         -- mode 7 seems to default to mode 4
                                         mode_base    <= "1011"; -- 0x5800
@@ -772,20 +790,15 @@ begin
                             when x"D" =>
 
                               case crtc_reg_addr is
-                                when x"0C" =>
+                                when x"0C" =>   -- R12
                                   screen_base(14 downto 8) <= data_in(5) & data_in(5 downto 0);
-                                when x"0D" =>
+                                  crtc_screen_start(13 downto 8) <= data_in(5 downto 0);
+
+                                when x"0D"  =>   -- R13
                                   screen_base(7 downto 3) <= data_in(7 downto 3);
+                                  crtc_screen_start(7 downto 0) <= data_in;
                                 when others =>
                               end case;
-
-                              if screen_base(13) = '1' then
-                                mode_base    <= "1111";
-                                mode_bpp     <= "00";
-                                mode_40      <= '1';
-                                mode_text    <= '1';
-                                mode_ttxt    <= '1';
-                              end if;
 
                             when others =>
                             end case;
@@ -913,7 +926,7 @@ begin
                 byte_addr := screen_base(14 downto 6) & "000";
               else 
                 row_addr  := screen_base(11 downto 3);
-                byte_addr := screen_base(11 downto 3) & "000";
+                byte_addr := screen_base(11 downto 3) & "000"; -- top 2 bits here are wasted as they are always over-written
               end if;
           end if;
 

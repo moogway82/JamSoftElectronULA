@@ -1000,7 +1000,7 @@ begin
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FE02";
-    data <= x"14"; 
+    data <= x"00"; 
     R_W_n <= '0';
 
     wait until falling_edge(cpu_clk_out);
@@ -1076,6 +1076,44 @@ begin
     wait for cpu_addr_ready;
     addr <= x"FC1D";
     data <= x"28"; -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= (others => 'Z'); 
+    R_W_n <= '1';
+
+
+    wait for 40 ms;
+
+    -- Change the start address - start address 7c00
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0C"; -- &12
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"7F"; -- &3000
+    R_W_n <= '0';
+
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0D"; -- &13
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"E0"; -- &3000
     R_W_n <= '0';
 
     wait until falling_edge(cpu_clk_out);
