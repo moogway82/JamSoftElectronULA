@@ -111,6 +111,12 @@ architecture behavioral of JamSoftElectronULA is
   signal isr            : std_logic_vector(6 downto 2);
   signal ier            : std_logic_vector(6 downto 2);
   signal screen_base    : std_logic_vector(14 downto 3);
+  signal ula_screen_base : std_logic_vector(14 downto 3);
+  signal crtc_screen_base : std_logic_vector(13 downto 0);
+  signal crtc_screen_base_sel: std_logic;
+  signal ula_screen_base_sel: std_logic;
+
+
   signal data_shift     : std_logic_vector(7 downto 0);
   signal page_enable    : std_logic;
   signal page           : std_logic_vector(2 downto 0);
@@ -153,6 +159,7 @@ architecture behavioral of JamSoftElectronULA is
 
   -- Screen Mode Registers
 
+  signal mode_no        : std_logic_vector(2 downto 0);
   -- bits 6..3 the of the 256 byte page that the mode starts at
   signal mode_base      : std_logic_vector(6 downto 3);
 
@@ -445,7 +452,10 @@ begin
 
                isr             <= (others => '0');
                ier             <= (others => '0');
-               screen_base     <= (others => '0');
+               ula_screen_base <= (others => '0');
+               crtc_screen_base <= (others => '0'); 
+               ula_screen_base_sel <= '1';
+               crtc screen_base_sel <= '0';
                data_shift      <= (others => '0');
                page_enable     <= '0';
                page            <= (others => '0');
@@ -459,7 +469,6 @@ begin
                cintone         <= '0';
                ctrl_caps       <= '0';
                turbo           <= '0';
-               mode_ttxt       <= '0';
                crtc_reg_addr   <= (others => '0');
 
             else
@@ -635,6 +644,29 @@ begin
                         turbo <= '1';
                     end if;
 
+                    if (addr(15 downto 8) = x"FC") then
+                      if (R_W_n = '0') then
+                        case addr(3 downto 0) is
+
+                          when x"C" =>
+
+                              crtc_reg_addr <= data_in;
+
+                          when x"D" =>
+
+                            if crtc_reg_addr = x"0C" then
+                                crtc_screen_base(13 downto 8) <= data_in(5 downto 0);
+                                crtc_screen_base_sel <= '1';
+                              elsif crtc_reg_addr = x"0D" then
+                                crtc_screen_base(7 downto 0) <= data_in;
+                                crtc_screen_base_sel <= '1';
+                              end if;
+
+                          when others =>
+                        end case;
+                      end if;
+                    end if;
+
                     if (addr(15 downto 8) = x"FE") then
                         if (R_W_n = '1') then
                             -- Clear the RDFull interrupts on reading the data_shift register
@@ -647,9 +679,11 @@ begin
                                 ier(6 downto 2) <= data_in(6 downto 2);
                             when x"1" =>
                             when x"2" =>
-                                screen_base(8 downto 3) <= data_in(7 downto 2);
+                                ula_screen_base(8 downto 3) <= data_in(7 downto 2);
+                                ula_screen_base_sel <= '1';
                             when x"3" =>
-                                screen_base(14 downto 9) <= data_in(5 downto 0);
+                                ula_screen_base(14 downto 9) <= data_in(5 downto 0);
+                                ula_screen_base_sel <= '1';
                             when x"4" =>
                                 data_shift <= data_in;
                                 -- Clear the TDEmpty interrupt on writing the
@@ -684,66 +718,7 @@ begin
                             when x"7" =>
                                 caps_int     <= data_in(7);
                                 motor_int    <= data_in(6);
-                                case (data_in(5 downto 3)) is
-                                when "000" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "001" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "01";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "010" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "10";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "011" =>
-                                    mode_base    <= "1000"; -- 0x4000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '0';
-                                    mode_text    <= '1';
-                                    mode_ttxt    <= '0';
-                                when "100" =>
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "101" =>
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "01";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "110" =>
-                                    mode_base    <= "1100"; -- 0x6000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '1';
-                                    mode_ttxt    <= '0';
-                                when "111" =>
-                                    if IncludeMode7 = true then
-                                        mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
-                                        mode_bpp     <= "00";
-                                        mode_40      <= '1';
-                                        mode_text    <= '1';
-                                        mode_ttxt    <= '1';
-                                    else 
-                                        -- mode 7 seems to default to mode 4
-                                        mode_base    <= "1011"; -- 0x5800
-                                        mode_bpp     <= "00";
-                                        mode_40      <= '1';
-                                        mode_text    <= '0';
-                                        mode_ttxt    <= '0';
-                                    end if;
-                                when others =>
-                                end case;
+                                mode_no      <= data_in(5 downto 3);
                                 comms_mode   <= data_in(2 downto 1);
                                 -- A quirk of the Electron ULA is that RxFull
                                 -- interrupt fires when tape output mode is
@@ -757,37 +732,6 @@ begin
                                 -- A '1' in the palatte data means disable the colour
                                 -- Invert the stored palette, to make the palette logic simpler
                                 palette(slv2int(addr(2 downto 0))) <= data_in xor "11111111";
-                            end case;
-                        end if;
-                    end if;
-
-                    if (addr(15 downto 8) = x"FC") then
-                        if (R_W_n = '0') then
-                            case addr(3 downto 0) is
-
-                            when x"C" =>
-
-                                crtc_reg_addr <= data_in;
-
-                            when x"D" =>
-
-                              case crtc_reg_addr is
-                                when x"0C" =>
-                                  screen_base(14 downto 8) <= data_in(5) & data_in(5 downto 0);
-                                when x"0D" =>
-                                  screen_base(7 downto 3) <= data_in(7 downto 3);
-                                when others =>
-                              end case;
-
-                              if screen_base(13) = '1' then
-                                mode_base    <= "1111";
-                                mode_bpp     <= "00";
-                                mode_40      <= '1';
-                                mode_text    <= '1';
-                                mode_ttxt    <= '1';
-                              end if;
-
-                            when others =>
                             end case;
                         end if;
                     end if;
@@ -822,6 +766,93 @@ begin
                     '0' when  (mode_text = '1' and v_count >= v_active_txt) else
                     '0' when  (unsigned(char_row) >= 8) and mode_ttxt = '0' else  
                     not mode_40;
+
+    screen_base_set : process (clk_16M00,RST_IN_n)
+    begin
+      if RST_IN_n = '0' then
+        screen_base
+      elsif rising_edge(clk_16M00) then
+      end if;
+    end process screen_base_set
+    screen_base <=  ula_screen_base when screen_base_sel = '0' else
+                    "0" & crtc_screen_base(13 downto 3) when screen_base_sel = '1' else
+                    (others => '0');
+
+
+
+    mode_selection : process (clk_16M00,RST_IN_n)
+    begin
+      if (RST_IN_n = '0') then
+        mode_base    <= "1100"; -- 0x6000
+        mode_bpp     <= "00";
+        mode_40      <= '1';
+        mode_text    <= '1';
+        mode_ttxt    <= '0';
+        screen_base  
+      elsif rising_edge(clk_16M00) then
+        case (mode_no) is
+          when "000" =>
+              mode_base    <= "0110"; -- 0x3000
+              mode_bpp     <= "00";
+              mode_40      <= '0';
+              mode_text    <= '0';
+              mode_ttxt    <= '0';
+          when "001" =>
+              mode_base    <= "0110"; -- 0x3000
+              mode_bpp     <= "01";
+              mode_40      <= '0';
+              mode_text    <= '0';
+              mode_ttxt    <= '0';
+          when "010" =>
+              mode_base    <= "0110"; -- 0x3000
+              mode_bpp     <= "10";
+              mode_40      <= '0';
+              mode_text    <= '0';
+              mode_ttxt    <= '0';
+          when "011" =>
+              mode_base    <= "1000"; -- 0x4000
+              mode_bpp     <= "00";
+              mode_40      <= '0';
+              mode_text    <= '1';
+              mode_ttxt    <= '0';
+          when "100" =>
+              mode_base    <= "1011"; -- 0x5800
+              mode_bpp     <= "00";
+              mode_40      <= '1';
+              mode_text    <= '0';
+              mode_ttxt    <= '0';
+          when "101" =>
+              mode_base    <= "1011"; -- 0x5800
+              mode_bpp     <= "01";
+              mode_40      <= '1';
+              mode_text    <= '0';
+              mode_ttxt    <= '0';
+          when "110" =>
+              mode_base    <= "1100"; -- 0x6000
+              mode_bpp     <= "00";
+              mode_40      <= '1';
+              mode_text    <= '1';
+              mode_ttxt    <= '0';
+          when "111" =>
+              if IncludeMode7 = true then
+                  mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
+                  mode_bpp     <= "00";
+                  mode_40      <= '1';
+                  mode_text    <= '1';
+                  mode_ttxt    <= '1';
+              else 
+                  -- mode 7 seems to default to mode 4
+                  mode_base    <= "1011"; -- 0x5800
+                  mode_bpp     <= "00";
+                  mode_40      <= '1';
+                  mode_text    <= '0';
+                  mode_ttxt    <= '0';
+              end if;
+          when others =>
+          end case;
+
+      end if;
+    end process mode_selection;
 
     gen_video : process (clk_16M00,RST_IN_n)
         variable pixel : std_logic_vector(3 downto 0);
