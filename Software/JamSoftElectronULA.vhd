@@ -373,6 +373,9 @@ begin
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
                 x"F1"; -- todo FIXEME
 
+    -- ** DONT FORGET TO UPDATE THIS IS DECODING ANY NEW ADDRESS RANGES OTHERWISE FPGA WILL NOT SEE DATA BUS **
+    -- ** HARD TO SPOT THE PROBLEM ON SIMULATION **
+    --
     -- Used to control the ULA's data bus buffer (ie, Level Shifting buffer so FPGA can handle 5V)
     -- ULA isn't the only thing on the Databus, ROM talks directly to CPU & Keyboard as might other edge connected devices
     data_en  <= '1'                       when addr(15) = '0' else
@@ -730,9 +733,9 @@ begin
                                     mode_ttxt    <= '0';
                                 when "111" =>
                                     if IncludeMode7 = true then
-                                        mode_base    <= "1111"; -- 0x7C00 -- TODO: Gonna need more bits for 7C00 as I need Addr 14-10 = "1111 1", "1111" is just 7800
-                                        mode_bpp     <= "00";
-                                        mode_40      <= '1';
+                                        mode_base    <= "1111"; -- Not used in Mode 7
+                                        mode_bpp     <= "00";   -- Not used in Mode 7
+                                        mode_40      <= '1';    
                                         mode_text    <= '1';
                                         mode_ttxt    <= '1';
                                     else 
@@ -762,7 +765,8 @@ begin
                         end if;
                     end if;
 
-                    if (addr(15 downto 4) = x"FC1") then
+                    -- For Jafa Mk1 ROM Compatibility
+                    if (addr(15 downto 4) = x"FC1") and IncludeMode7 = true then
                         if (R_W_n = '0') then
                           case addr(3 downto 0) is
 
