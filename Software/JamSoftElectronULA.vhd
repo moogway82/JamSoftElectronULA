@@ -378,6 +378,7 @@ begin
     data_en  <= '1'                       when addr(15) = '0' else
                 '1'                       when kbd_access = '1' else
                 '1'                       when addr(15 downto 8) = x"FE" else
+                '1'                       when addr(15 downto 4) = x"FC1" else
                 '0';
 
     -- The data buffer enable is active LOW
@@ -761,9 +762,9 @@ begin
                         end if;
                     end if;
 
-                    if (addr(15 downto 8) = x"FC") then
+                    if (addr(15 downto 4) = x"FC1") then
                         if (R_W_n = '0') then
-                            case addr(3 downto 0) is
+                          case addr(3 downto 0) is
 
                             when x"C" =>
 
@@ -774,21 +775,21 @@ begin
                               case crtc_reg_addr is
                                 when x"0C" =>
                                   screen_base(14 downto 8) <= data_in(5) & data_in(5 downto 0);
+                                  if data_in(5) = '1' then -- MA(13) set high, then enable Mode 7
+                                    mode_base    <= "1111";
+                                    mode_bpp     <= "00";
+                                    mode_40      <= '1';
+                                    mode_text    <= '1';
+                                    mode_ttxt    <= '1';
+                                  end if;
+
                                 when x"0D" =>
                                   screen_base(7 downto 3) <= data_in(7 downto 3);
                                 when others =>
                               end case;
 
-                              if screen_base(13) = '1' then
-                                mode_base    <= "1111";
-                                mode_bpp     <= "00";
-                                mode_40      <= '1';
-                                mode_text    <= '1';
-                                mode_ttxt    <= '1';
-                              end if;
-
                             when others =>
-                            end case;
+                          end case;
                         end if;
                     end if;
 
