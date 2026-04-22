@@ -153,6 +153,7 @@ architecture behavioral of JamSoftElectronULA is
 
   -- Screen Mode Registers
 
+  signal mode_no        : std_logic_vector(2 downto 0);
   -- bits 6..3 the of the 256 byte page that the mode starts at
   signal mode_base      : std_logic_vector(6 downto 3);
 
@@ -256,6 +257,10 @@ architecture behavioral of JamSoftElectronULA is
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
+  signal jafa_do : std_logic_vector(7 downto 0);
+  signal jafa_enable : std_logic;
+  signal ttxt_cursor : std_logic_vector(13 downto 0);
+  signal jafa_mode7_enable : std_logic;
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -371,6 +376,7 @@ begin
                 "0000" & (kbd xor "1111") when kbd_access = '1' else
                 isr_data                  when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"0" else
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
+                jafa_do                   when jafa_enable = '1' and IncludeMode7 = true else
                 x"F1"; -- todo FIXEME
 
     -- ** DONT FORGET TO UPDATE THIS IS DECODING ANY NEW ADDRESS RANGES OTHERWISE FPGA WILL NOT SEE DATA BUS **
@@ -381,7 +387,7 @@ begin
     data_en  <= '1'                       when addr(15) = '0' else
                 '1'                       when kbd_access = '1' else
                 '1'                       when addr(15 downto 8) = x"FE" else
-                '1'                       when addr(15 downto 4) = x"FC1" else
+                '1'                       when jafa_enable = '1' and IncludeMode7 = true else
                 '0';
 
     -- The data buffer enable is active LOW
@@ -463,8 +469,9 @@ begin
                cintone         <= '0';
                ctrl_caps       <= '0';
                turbo           <= '0';
-               mode_ttxt       <= '0';
+               mode_no         <= "110";
                crtc_reg_addr   <= (others => '0');
+               jafa_mode7_enable  <= '0';
 
             else
  
@@ -639,6 +646,34 @@ begin
                         turbo <= '1';
                     end if;
 
+                    -- Jafa Mode 7 compatibility
+                    if (addr = x"FC1C" and R_W_n = '0') then 
+                      crtc_reg_addr <= data_in;
+                    end if;
+                    if (addr = x"FC1D" and R_W_n = '0') then
+                      case crtc_reg_addr is
+
+                        when x"0C" =>
+                          screen_base(14 downto 8) <= '0' & data_in(5 downto 0);
+                          if data_in(5) = '1' then -- Writing screen_address(13) to '1' enables Mode 7
+                            jafa_mode7_enable <= '1';
+                          else 
+                            jafa_mode7_enable <= '0';
+                          end if;
+
+                        when x"0D" =>
+                          screen_base(7 downto 3) <= data_in(7 downto 3);
+
+                        when x"0E" => -- R14 Cursor H
+                          ttxt_cursor(13 downto 8) <= data_in(5 downto 0);
+
+                        when x"0F" => -- R15 Cursor L
+                          ttxt_cursor(7 downto 0) <= data_in(7 downto 0);
+
+                        when others =>
+                      end case;
+                    end if;
+
                     if (addr(15 downto 8) = x"FE") then
                         if (R_W_n = '1') then
                             -- Clear the RDFull interrupts on reading the data_shift register
@@ -688,66 +723,7 @@ begin
                             when x"7" =>
                                 caps_int     <= data_in(7);
                                 motor_int    <= data_in(6);
-                                case (data_in(5 downto 3)) is
-                                when "000" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "001" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "01";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "010" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "10";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "011" =>
-                                    mode_base    <= "1000"; -- 0x4000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '0';
-                                    mode_text    <= '1';
-                                    mode_ttxt    <= '0';
-                                when "100" =>
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "101" =>
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "01";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                    mode_ttxt    <= '0';
-                                when "110" =>
-                                    mode_base    <= "1100"; -- 0x6000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '1';
-                                    mode_ttxt    <= '0';
-                                when "111" =>
-                                    if IncludeMode7 = true then
-                                        mode_base    <= "1111"; -- Not used in Mode 7
-                                        mode_bpp     <= "00";   -- Not used in Mode 7
-                                        mode_40      <= '1';    
-                                        mode_text    <= '1';
-                                        mode_ttxt    <= '1';
-                                    else 
-                                        -- mode 7 seems to default to mode 4
-                                        mode_base    <= "1011"; -- 0x5800
-                                        mode_bpp     <= "00";
-                                        mode_40      <= '1';
-                                        mode_text    <= '0';
-                                        mode_ttxt    <= '0';
-                                    end if;
-                                when others =>
-                                end case;
+                                mode_no      <= data_in(5 downto 3);
                                 comms_mode   <= data_in(2 downto 1);
                                 -- A quirk of the Electron ULA is that RxFull
                                 -- interrupt fires when tape output mode is
@@ -764,43 +740,89 @@ begin
                             end case;
                         end if;
                     end if;
-
-                    -- For Jafa Mk1 ROM Compatibility
-                    if (addr(15 downto 4) = x"FC1") and IncludeMode7 = true then
-                        if (R_W_n = '0') then
-                          case addr(3 downto 0) is
-
-                            when x"C" =>
-
-                                crtc_reg_addr <= data_in;
-
-                            when x"D" =>
-
-                              case crtc_reg_addr is
-                                when x"0C" =>
-                                  screen_base(14 downto 8) <= data_in(5) & data_in(5 downto 0);
-                                  if data_in(5) = '1' then -- MA(13) set high, then enable Mode 7
-                                    mode_base    <= "1111";
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '1';
-                                    mode_ttxt    <= '1';
-                                  end if;
-
-                                when x"0D" =>
-                                  screen_base(7 downto 3) <= data_in(7 downto 3);
-                                when others =>
-                              end case;
-
-                            when others =>
-                          end case;
-                        end if;
-                    end if;
-
                 end if;
             end if;
         end if;
     end process; -- rtcint_cassette_regs
+
+
+    -- Mode Selection
+    mode_selection : process(RST_IN_n, clk_16M00)
+    begin
+      if RST_IN_n = '0' then
+        -- Not resetting any mode_ vars apart from ttxt as originals don't seem to have defaults
+        mode_ttxt <= '0';
+      elsif rising_edge(clk_16M00) then
+        if jafa_mode7_enable = '1' and IncludeMode7 = true then
+            mode_base    <= "0111"; -- Not used in Mode 7
+            mode_bpp     <= "00";   -- Not used in Mode 7
+            mode_40      <= '1';    -- Used a little in Mode 7   
+            mode_text    <= '1';    -- Used a lot in Mode 7
+            mode_ttxt    <= '1';    -- Switches to SAA5050 for rendering pixels
+        else
+          case mode_no is
+            when "000" =>
+                mode_base    <= "0110"; -- 0x3000
+                mode_bpp     <= "00";
+                mode_40      <= '0';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "001" =>
+                mode_base    <= "0110"; -- 0x3000
+                mode_bpp     <= "01";
+                mode_40      <= '0';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "010" =>
+                mode_base    <= "0110"; -- 0x3000
+                mode_bpp     <= "10";
+                mode_40      <= '0';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "011" =>
+                mode_base    <= "1000"; -- 0x4000
+                mode_bpp     <= "00";
+                mode_40      <= '0';
+                mode_text    <= '1';
+                mode_ttxt    <= '0';
+            when "100" =>
+                mode_base    <= "1011"; -- 0x5800
+                mode_bpp     <= "00";
+                mode_40      <= '1';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "101" =>
+                mode_base    <= "1011"; -- 0x5800
+                mode_bpp     <= "01";
+                mode_40      <= '1';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "110" =>
+                mode_base    <= "1100"; -- 0x6000
+                mode_bpp     <= "00";
+                mode_40      <= '1';
+                mode_text    <= '1';
+                mode_ttxt    <= '0';
+            when "111" =>
+                if IncludeMode7 = true then
+                    mode_base    <= "0111"; -- Not used in Mode 7
+                    mode_bpp     <= "00";   -- Not used in Mode 7
+                    mode_40      <= '1';    -- Used a little in Mode 7   
+                    mode_text    <= '1';    -- Used a lot in Mode 7
+                    mode_ttxt    <= '1';    -- Switches to SAA5050 for rendering pixels
+                else 
+                    -- mode 7 seems to default to mode 4
+                    mode_base    <= "1011"; -- 0x5800
+                    mode_bpp     <= "00";
+                    mode_40      <= '1';
+                    mode_text    <= '0';
+                    mode_ttxt    <= '0';
+                end if;
+            when others =>
+          end case;
+        end if;
+      end if;
+    end process mode_selection;
 
     caps  <= not caps_int;
     motor <= motor_int;
@@ -1500,6 +1522,7 @@ begin
 
     Mode7Included: if IncludeMode7 generate
 
+      -- Generate the 6MHz Dot Clock for Mode 7
       p_gen_ttxt_clken : process(clk_16M00, RST_IN_n)
         variable ttxt_clk_count : unsigned(3 downto 0) := (others => '0');
       begin
@@ -1525,6 +1548,18 @@ begin
           end if;
         end if;
       end process p_gen_ttxt_clken;
+
+      jafa_enable <= '1' when addr = x"fc1c" else
+                     '1' when addr = x"fc1d" else
+                     '1' when addr = x"fc1f" else
+                     '0';
+
+      jafa_do <=  '0' & screen_base(14 downto 8)  when addr = x"fc1d" and crtc_reg_addr = x"0C" else
+                  screen_base(7 downto 3) & "000" when addr = x"fc1d" and crtc_reg_addr = x"0D" else
+                  "00" & ttxt_cursor(13 downto 8) when addr = x"fc1d" and crtc_reg_addr = x"0E" else
+                  ttxt_cursor(7 downto 0)         when addr = x"fc1d" and crtc_reg_addr = x"0F" else
+                  "00" & ttxt_dew & "00000"       when addr = x"fc1f" else
+                  (others => '0');
 
       teletext : entity work.saa5050
         generic map (
