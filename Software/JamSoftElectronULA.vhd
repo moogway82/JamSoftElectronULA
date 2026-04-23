@@ -111,6 +111,7 @@ architecture behavioral of JamSoftElectronULA is
   signal isr            : std_logic_vector(6 downto 2);
   signal ier            : std_logic_vector(6 downto 2);
   signal screen_base    : std_logic_vector(14 downto 3);
+  signal ula_screen_base    : std_logic_vector(14 downto 3);
   signal data_shift     : std_logic_vector(7 downto 0);
   signal page_enable    : std_logic;
   signal page           : std_logic_vector(2 downto 0);
@@ -254,6 +255,7 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_g_int : std_logic;
   signal ttxt_b_int : std_logic;
   signal crtc_reg_addr : std_logic_vector(7 downto 0);
+  signal crtc_screen_base : std_logic_vector(13 downto 0);
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
@@ -455,7 +457,8 @@ begin
 
                isr             <= (others => '0');
                ier             <= (others => '0');
-               screen_base     <= (others => '0');
+               ula_screen_base <= (others => '0');
+               crtc_screen_base  <= (others => '0');
                data_shift      <= (others => '0');
                page_enable     <= '0';
                page            <= (others => '0');
@@ -654,7 +657,7 @@ begin
                       case crtc_reg_addr is
 
                         when x"0C" =>
-                          screen_base(14 downto 8) <= '0' & data_in(5 downto 0);
+                          crtc_screen_base(13 downto 8) <= data_in(5 downto 0);
                           if data_in(5) = '1' then -- Writing screen_address(13) to '1' enables Mode 7
                             jafa_mode7_enable <= '1';
                           else 
@@ -662,7 +665,7 @@ begin
                           end if;
 
                         when x"0D" =>
-                          screen_base(7 downto 3) <= data_in(7 downto 3);
+                          crtc_screen_base(7 downto 3) <= data_in(7 downto 3);
 
                         when x"0E" => -- R14 Cursor H
                           ttxt_cursor(13 downto 8) <= data_in(5 downto 0);
@@ -686,9 +689,9 @@ begin
                                 ier(6 downto 2) <= data_in(6 downto 2);
                             when x"1" =>
                             when x"2" =>
-                                screen_base(8 downto 3) <= data_in(7 downto 2);
+                                ula_screen_base(8 downto 3) <= data_in(7 downto 2);
                             when x"3" =>
-                                screen_base(14 downto 9) <= data_in(5 downto 0);
+                                ula_screen_base(14 downto 9) <= data_in(5 downto 0);
                             when x"4" =>
                                 data_shift <= data_in;
                                 -- Clear the TDEmpty interrupt on writing the
@@ -744,6 +747,9 @@ begin
             end if;
         end if;
     end process; -- rtcint_cassette_regs
+
+    screen_base <=  "0" & crtc_screen_base(13 downto 3) when jafa_mode7_enable = '1' and IncludeMode7 = true else
+                    ula_screen_base;
 
 
     -- Mode Selection
