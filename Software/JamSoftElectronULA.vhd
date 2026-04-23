@@ -265,6 +265,7 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
   signal ttxt_cursor_start : std_logic_vector(6 downto 0);
   signal ttxt_cursor_end : std_logic_vector(4 downto 0);
+  signal ttxt_cursor_blink : std_logic_vector(5 downto 0);
   signal jafa_mode7_enable : std_logic;
 
 -- Helper function to cast an std_logic value to an integer
@@ -478,6 +479,9 @@ begin
                mode_no         <= "110";
                jafa_reg_addr   <= (others => '0');
                jafa_mode7_enable  <= '0';
+               ttxt_cursor_pos <= (others => '0');
+               ttxt_cursor_start <= (others => '0');
+               ttxt_cursor_end <= (others => '0');
 
             else
  
@@ -869,6 +873,7 @@ begin
         variable row_addr  : std_logic_vector(14 downto 6);
         -- address within current line
         variable byte_addr : std_logic_vector(14 downto 3);
+        variable txtt_cursor_visible : std_logic;
     begin
         if (RST_IN_n = '0') then
         -- H_COUNT controls the plotting of Pixels so really needs to be aligned to the DRAM VDU Cycles
@@ -880,6 +885,8 @@ begin
           field <= '0';
           hsync_int <= '1';
           vsync_int <= '1';
+          ttxt_cursor <= '0';
+          ttxt_cursor_blink <= (others => '0');
 
         elsif rising_edge(clk_16M00) then
 
@@ -907,6 +914,7 @@ begin
 
           if h_count = h_total and v_count = v_total then
             field <= not field;
+            ttxt_cursor_blink <= std_logic_vector(unsigned(ttxt_cursor_blink) + 1);
           end if;
 
           -- Char_row counts 0..7 or 0..9 depending on the mode.
@@ -993,7 +1001,22 @@ begin
             screen_addr <= "11111" & byte_addr(12 downto 3);
           end if;
 
-          if byte_addr(12 downto 3) = ttxt_cursor_pos(9 downto 0) and IncludeMode7 = true then
+          -- Control the cursor blinking/visibility
+          case ttxt_cursor_start(6 downto 5) is
+            when "00" =>
+              txtt_cursor_visible := '1'; -- Always on
+            when "01" =>
+              txtt_cursor_visible := '0'; -- Always off
+            when "10" =>
+              txtt_cursor_visible := ttxt_cursor_blink(4); -- Alternates visibility every 16 fields
+            when "11" => 
+              txtt_cursor_visible := ttxt_cursor_blink(5); -- Alternates visibility every 32 fields
+            when others =>
+              txtt_cursor_visible := '0';
+          end case;
+
+          -- Mode 7 Cursor rendering
+          if byte_addr(12 downto 3) = ttxt_cursor_pos(9 downto 0) and txtt_cursor_visible = '1' and IncludeMode7 = true then
             if char_row = ttxt_cursor_start(3 downto 0) then
               ttxt_cursor <= '1';
             end if;
