@@ -254,14 +254,17 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_r_int : std_logic;
   signal ttxt_g_int : std_logic;
   signal ttxt_b_int : std_logic;
-  signal crtc_reg_addr : std_logic_vector(7 downto 0);
-  signal crtc_screen_base : std_logic_vector(13 downto 0);
+  signal jafa_reg_addr : std_logic_vector(7 downto 0);
+  signal jafa_screen_base : std_logic_vector(13 downto 0);
   signal char_rom_we : std_logic;
   signal char_rom_addr : std_logic_vector(11 downto 0);
   signal char_rom_data : std_logic_vector(7 downto 0);
   signal jafa_do : std_logic_vector(7 downto 0);
   signal jafa_enable : std_logic;
-  signal ttxt_cursor : std_logic_vector(13 downto 0);
+  signal ttxt_cursor : std_logic;
+  signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
+  signal ttxt_cursor_start : std_logic_vector(6 downto 0);
+  signal ttxt_cursor_end : std_logic_vector(4 downto 0);
   signal jafa_mode7_enable : std_logic;
 
 -- Helper function to cast an std_logic value to an integer
@@ -458,7 +461,7 @@ begin
                isr             <= (others => '0');
                ier             <= (others => '0');
                ula_screen_base <= (others => '0');
-               crtc_screen_base  <= (others => '0');
+               jafa_screen_base  <= (others => '0');
                data_shift      <= (others => '0');
                page_enable     <= '0';
                page            <= (others => '0');
@@ -473,7 +476,7 @@ begin
                ctrl_caps       <= '0';
                turbo           <= '0';
                mode_no         <= "110";
-               crtc_reg_addr   <= (others => '0');
+               jafa_reg_addr   <= (others => '0');
                jafa_mode7_enable  <= '0';
 
             else
@@ -651,13 +654,17 @@ begin
 
                     -- Jafa Mode 7 compatibility
                     if (addr = x"FC1C" and R_W_n = '0') then 
-                      crtc_reg_addr <= data_in;
+                      jafa_reg_addr <= data_in;
                     end if;
                     if (addr = x"FC1D" and R_W_n = '0') then
-                      case crtc_reg_addr is
+                      case jafa_reg_addr is
+
+                        when x"0A" =>
+                          ttxt_cursor_start <= data_in(6 downto 0);
+                          ttxt_cursor_end <= data_in(4 downto 0);
 
                         when x"0C" =>
-                          crtc_screen_base(13 downto 8) <= data_in(5 downto 0);
+                          jafa_screen_base(13 downto 8) <= data_in(5 downto 0);
                           if data_in(5) = '1' then -- Writing screen_address(13) to '1' enables Mode 7
                             jafa_mode7_enable <= '1';
                           else 
@@ -665,13 +672,13 @@ begin
                           end if;
 
                         when x"0D" =>
-                          crtc_screen_base(7 downto 3) <= data_in(7 downto 3);
+                          jafa_screen_base(7 downto 3) <= data_in(7 downto 3);
 
                         when x"0E" => -- R14 Cursor H
-                          ttxt_cursor(13 downto 8) <= data_in(5 downto 0);
+                          ttxt_cursor_pos(13 downto 8) <= data_in(5 downto 0);
 
                         when x"0F" => -- R15 Cursor L
-                          ttxt_cursor(7 downto 0) <= data_in(7 downto 0);
+                          ttxt_cursor_pos(7 downto 0) <= data_in(7 downto 0);
 
                         when others =>
                       end case;
@@ -748,7 +755,7 @@ begin
         end if;
     end process; -- rtcint_cassette_regs
 
-    screen_base <=  "0" & crtc_screen_base(13 downto 3) when jafa_mode7_enable = '1' and IncludeMode7 = true else
+    screen_base <=  "0" & jafa_screen_base(13 downto 3) when jafa_mode7_enable = '1' and IncludeMode7 = true else
                     ula_screen_base;
 
 
@@ -946,6 +953,8 @@ begin
                 byte_addr := screen_base(14 downto 6) & "000";
               else 
                 row_addr  := screen_base(11 downto 3);
+                -- TODO: This might cause errors in Mode 7 as will not be able to offset the screen start
+                -- in blocks smaller than 8 characters.
                 byte_addr := screen_base(11 downto 3) & "000";
               end if;
           end if;
@@ -982,6 +991,18 @@ begin
             screen_addr <= byte_addr & char_row(2 downto 0);
           else 
             screen_addr <= "11111" & byte_addr(12 downto 3);
+          end if;
+
+          if byte_addr(12 downto 3) = ttxt_cursor_pos(9 downto 0) and IncludeMode7 = true then
+            if char_row = ttxt_cursor_start(3 downto 0) then
+              ttxt_cursor <= '1';
+            end if;
+            -- ttxt_cursor_end is inclusive, so wait until the end of the character row to clear cursor
+            if char_row = ttxt_cursor_end(3 downto 0) and h_count(3 downto 0) = "1000" then
+              ttxt_cursor <= '0';
+            end if;
+          else 
+            ttxt_cursor <= '0';
           end if;
 
           -- Pixels start being plotted on a row at h_count=0 so need to have the 
@@ -1151,11 +1172,11 @@ begin
 
     end process;
 
-    red   <=  ttxt_r_int when mode_ttxt = '1' else
+    red   <=  ttxt_r_int xor ttxt_cursor when mode_ttxt = '1' else
               red_int;
-    green <=  ttxt_g_int when mode_ttxt = '1' else
+    green <=  ttxt_g_int xor ttxt_cursor when mode_ttxt = '1' else
               green_int;
-    blue  <=  ttxt_b_int when mode_ttxt = '1' else
+    blue  <=  ttxt_b_int xor ttxt_cursor when mode_ttxt = '1' else
               blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     HS_n  <= hsync_int;
@@ -1560,10 +1581,10 @@ begin
                      '1' when addr = x"fc1f" else
                      '0';
 
-      jafa_do <=  '0' & screen_base(14 downto 8)  when addr = x"fc1d" and crtc_reg_addr = x"0C" else
-                  screen_base(7 downto 3) & "000" when addr = x"fc1d" and crtc_reg_addr = x"0D" else
-                  "00" & ttxt_cursor(13 downto 8) when addr = x"fc1d" and crtc_reg_addr = x"0E" else
-                  ttxt_cursor(7 downto 0)         when addr = x"fc1d" and crtc_reg_addr = x"0F" else
+      jafa_do <=  '0' & screen_base(14 downto 8)  when addr = x"fc1d" and jafa_reg_addr = x"0C" else
+                  screen_base(7 downto 3) & "000" when addr = x"fc1d" and jafa_reg_addr = x"0D" else
+                  "00" & ttxt_cursor_pos(13 downto 8) when addr = x"fc1d" and jafa_reg_addr = x"0E" else
+                  ttxt_cursor_pos(7 downto 0)         when addr = x"fc1d" and jafa_reg_addr = x"0F" else
                   "00" & ttxt_dew & "00000"       when addr = x"fc1f" else
                   (others => '0');
 
