@@ -262,6 +262,10 @@ architecture behavioral of JamSoftElectronULA is
   signal jafa_do : std_logic_vector(7 downto 0);
   signal jafa_enable : std_logic;
   signal ttxt_cursor : std_logic;
+  signal ttxt_cursor_delay1 : std_logic;
+  signal ttxt_cursor_delay2 : std_logic;
+  signal ttxt_cursor_delay3 : std_logic;
+  -- signal ttxt_cursor_delay4 : std_logic;
   signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
   signal ttxt_cursor_start : std_logic_vector(6 downto 0);
   signal ttxt_cursor_end : std_logic_vector(4 downto 0);
@@ -665,6 +669,8 @@ begin
 
                         when x"0A" =>
                           ttxt_cursor_start <= data_in(6 downto 0);
+
+                        when x"0B" =>
                           ttxt_cursor_end <= data_in(4 downto 0);
 
                         when x"0C" =>
@@ -886,6 +892,9 @@ begin
           hsync_int <= '1';
           vsync_int <= '1';
           ttxt_cursor <= '0';
+          ttxt_cursor_delay1 <= '0';
+          ttxt_cursor_delay2 <= '0';
+
           ttxt_cursor_blink <= (others => '0');
 
         elsif rising_edge(clk_16M00) then
@@ -981,9 +990,11 @@ begin
 
           -- Every 8 or 16 pixels depending on mode/repeats
           if h_count < h_active then
-              if (mode_40 = '0' and h_count(2 downto 0) = "000") or
-                 (mode_40 = '1' and h_count(3 downto 0) = "1000") then
+              if (mode_40 = '0' and h_count(2 downto 0) = "000") or (mode_40 = '1' and h_count(3 downto 0) = "1000") then
                   byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+                  -- Delay the Mode 7 cursor by 1 character
+                  ttxt_cursor_delay1 <= ttxt_cursor;
+                  ttxt_cursor_delay2 <= ttxt_cursor_delay1;
               end if;
           end if;
 
@@ -1016,14 +1027,15 @@ begin
           end case;
 
           -- Mode 7 Cursor rendering
-          if byte_addr(12 downto 3) = ttxt_cursor_pos(9 downto 0) and txtt_cursor_visible = '1' and IncludeMode7 = true then
-            if char_row = ttxt_cursor_start(3 downto 0) then
+          if byte_addr(12 downto 3) = ttxt_cursor_pos(9 downto 0) and txtt_cursor_visible = '1' and ttxt_lose = '1' and IncludeMode7 = true then
+            -- Bit wasteful using arithmetic, but have to add more controlling signals to do it at start and end so this is
+            -- neater...
+            -- 6845 counts interlaced char line, my ElkULA doesn't, so shifting the start and end down to halve it.
+            if unsigned(char_row) >= unsigned(ttxt_cursor_start(4 downto 1)) and unsigned(char_row) <= unsigned(ttxt_cursor_end(4 downto 1)) then
               ttxt_cursor <= '1';
-            end if;
-            -- ttxt_cursor_end is inclusive, so wait until the end of the character row to clear cursor
-            if char_row = ttxt_cursor_end(3 downto 0) and h_count(3 downto 0) = "1000" then
+            else 
               ttxt_cursor <= '0';
-            end if;
+            end if; 
           else 
             ttxt_cursor <= '0';
           end if;
@@ -1195,11 +1207,11 @@ begin
 
     end process;
 
-    red   <=  ttxt_r_int xor ttxt_cursor when mode_ttxt = '1' else
+    red   <=  ttxt_r_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
               red_int;
-    green <=  ttxt_g_int xor ttxt_cursor when mode_ttxt = '1' else
+    green <=  ttxt_g_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
               green_int;
-    blue  <=  ttxt_b_int xor ttxt_cursor when mode_ttxt = '1' else
+    blue  <=  ttxt_b_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
               blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     HS_n  <= hsync_int;
@@ -1579,6 +1591,7 @@ begin
         if RST_IN_n = '0' then
             ttxt_clk_count := (others => '0');
             ttxt_clken <= '0';
+            ttxt_cursor_delay3 <= '0';
         elsif rising_edge(clk_16M00) then
           ttxt_clken <= not ttxt_clken;
 
@@ -1596,6 +1609,11 @@ begin
           else
               ttxt_clken <= '0';
           end if;
+
+          -- time the cusor
+          if (ttxt_clk_count = 1) then
+            ttxt_cursor_delay3 <= ttxt_cursor_delay2;
+          end if;
         end if;
       end process p_gen_ttxt_clken;
 
@@ -1604,11 +1622,13 @@ begin
                      '1' when addr = x"fc1f" else
                      '0';
 
-      jafa_do <=  '0' & screen_base(14 downto 8)  when addr = x"fc1d" and jafa_reg_addr = x"0C" else
-                  screen_base(7 downto 3) & "000" when addr = x"fc1d" and jafa_reg_addr = x"0D" else
+      jafa_do <=  '0' & ttxt_cursor_start             when addr = x"fc1d" and jafa_reg_addr = x"0A" else
+                  "000" & ttxt_cursor_end             when addr = x"fc1d" and jafa_reg_addr = x"0B" else
+                  '0' & screen_base(14 downto 8)      when addr = x"fc1d" and jafa_reg_addr = x"0C" else
+                  screen_base(7 downto 3) & "000"     when addr = x"fc1d" and jafa_reg_addr = x"0D" else
                   "00" & ttxt_cursor_pos(13 downto 8) when addr = x"fc1d" and jafa_reg_addr = x"0E" else
                   ttxt_cursor_pos(7 downto 0)         when addr = x"fc1d" and jafa_reg_addr = x"0F" else
-                  "00" & ttxt_dew & "00000"       when addr = x"fc1f" else
+                  "00" & ttxt_dew & "00000"           when addr = x"fc1f" else
                   (others => '0');
 
       teletext : entity work.saa5050

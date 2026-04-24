@@ -947,11 +947,11 @@ begin
 
     -- Write some bytes
     rgb_test_vram_addr := x"7C00";
-    for i in 0 to 1000 loop
+    for i in 0 to 1023 loop
       wait until falling_edge(cpu_clk_out);
       wait for cpu_addr_ready;
       addr <= rgb_test_vram_addr;
-      data <=  x"20";
+      data <=  x"4" & std_logic_vector(to_unsigned( i, 4));
       R_W_n <= '0';
       rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
     end loop;
@@ -985,35 +985,57 @@ begin
     data <= "00111000"; 
     R_W_n <= '0';
 
+    -- Set Cursor Position and thickness
+    -- Start Line
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0A"; --R10 Start Char Row & Blink
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"10"; -- b65 "00" always-on, b40 start  BBC Mode 7
+    R_W_n <= '0';
+    -- End Line
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0B"; --R11 End Char Row & Blink
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"13"; -- b40 BBC mode 7
+    R_W_n <= '0';
+    -- Cursor Pos H
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0E"; --R14 Cursor Pos H
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"7C"; 
+    R_W_n <= '0';
+    -- Cursor Pos L
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0F"; --R14 Cursor Pos L
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"01"; 
+    R_W_n <= '0';
+
     wait for 40 ms;
-
-    -- Set Screen Start Address down 1 line
---; SHEILA &FE02 and &FE03
---; &7C00 = 0111 1100 0000 0000
---; 0 / [FE03] / [FE02] / 00 0000
---; 0 / 111 110 / 0 00 / 00 0000
---; FE02 = A8 A7 A6 X X X X X
---; FE03 = X X A14 A13 A12 A11 A10 A9
---; FE02 = 00000000 = &0
---; FE03 = 00111110 = &3E
--- 3E14 would be shifted down 1 line...
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FE02";
-    data <= x"14"; 
-    R_W_n <= '0';
-
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FE03";
-    data <= x"3E"; 
-    R_W_n <= '0';
-
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"0000";
-    data <= (others => 'Z'); 
-    R_W_n <= '1';
 
     -- Back to Mode 2
         -- Set Screen Start Address down 1 line
