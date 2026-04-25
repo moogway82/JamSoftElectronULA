@@ -18,6 +18,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
+    generic (
+        JafaIncluded  : boolean := true;
+        IncludeTurbo  : boolean := false
+    );
     port (
         clk_16M00 : in  std_logic;
 
@@ -271,16 +275,18 @@ begin
 
     not_cpu_clk <= not cpu_clk;
 
-    -- Turbo RAM using 8K Block RAM on FPGA
-    ula : entity work.turbo_ram 
-    port map(
-        addr => addr(12 downto 0),
-        write_en => turbo_we,
-        wclk => not_cpu_clk,
-        rclk => cpu_clk,
-        din => data_in,
-        dout => block_ram_data
-    );
+    TurboIncluded: if IncludeTurbo generate 
+      -- Turbo RAM using 8K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      port map(
+          addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
 
     -- TESTING PIN - This will change depending on what I need to check
     testing_pin <= '0';
@@ -349,6 +355,9 @@ begin
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
                 x"F1"; -- todo FIXEME
 
+    -- ** DONT FORGET TO UPDATE THIS IS DECODING ANY NEW ADDRESS RANGES OTHERWISE FPGA WILL NOT SEE DATA BUS **
+    -- ** HARD TO SPOT THE PROBLEM ON SIMULATION **
+    --
     -- Used to control the ULA's data bus buffer (ie, Level Shifting buffer so FPGA can handle 5V)
     -- ULA isn't the only thing on the Databus, ROM talks directly to CPU & Keyboard as might other edge connected devices
     data_en  <= '1'                       when addr(15) = '0' else
@@ -605,7 +614,7 @@ begin
                         end if;
                     end if;
                     -- Detect "2" being pressed: Turbo Speed
-                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') then
+                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') and IncludeTurbo = true then
                         turbo <= '1';
                     end if;
 
@@ -1028,10 +1037,21 @@ begin
 
     end process;
 
-    red   <= red_int;
-    green <= green_int;
-    blue  <= blue_int;
-    csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
+    red   <= (others => ttxt_r_out) when mode7_enable = '1' else
+             red_int;
+
+    green <= (others => ttxt_g_out) when mode7_enable = '1' else
+             green_int;
+
+    blue  <= (others => ttxt_b_out) when mode7_enable = '1' else
+             blue_int;
+
+    --vsync <= ttxt_vs_out when mode7_enable = '1' else
+    --         vsync_int;
+
+    csync <= ttxt_hs_out when mode7_enable = '1' else
+             hsync_int and vsync_int;
+
     HS_n  <= hsync_int;
 
 
@@ -1396,6 +1416,156 @@ begin
     ram_we  <= dram_we_int;
     ram_nRW <= not dram_we_int;
 
+--------------------------------------------------------
+-- Optional Jafa Mk1 Compatible Mode 7 Implementation
+--------------------------------------------------------
+
+    JafaIncluded: if IncludeMode7 generate
+
+        -- Generate the 6MHz Dot Clock for Mode 7
+        p_gen_ttxt_clken : process(clk_16M00, RST_IN_n)
+          variable ttxt_clk_count : unsigned(3 downto 0) := (others => '0');
+        begin
+          if RST_IN_n = '0' then
+              ttxt_clk_count := (others => '0');
+              ttxt_clken <= '0';
+              ttxt_cursor_delay3 <= '0';
+          elsif rising_edge(clk_16M00) then
+            ttxt_clken <= not ttxt_clken;
+
+            ---- Reset counter every 8 cycles (0 to 7)
+            if ttxt_clk_count = 7 then
+                ttxt_clk_count := (others => '0');
+            else
+                ttxt_clk_count := ttxt_clk_count + 1;
+            end if;
+
+            ---- Pulse high on 3 specific cycles to spread them out
+            ---- This gives an average frequency of 6MHz
+            if (ttxt_clk_count = 0 or ttxt_clk_count = 3 or ttxt_clk_count = 6) then
+                ttxt_clken <= '1';
+            else
+                ttxt_clken <= '0';
+            end if;
+
+            -- time the cusor
+            if (ttxt_clk_count = 3) then
+              ttxt_cursor_delay3 <= ttxt_cursor_delay2;
+            end if;
+          end if;
+        end process p_gen_ttxt_clken;
+
+        -- FC1C - Write address register
+        -- FC1D - Write data register
+        -- FC1E - Read status register - only bit 5 (vsync) is implemented
+        -- FC1F - Read data register
+
+        process (clk_16M00)
+        variable counter : std_logic_vector(3 downto 0);
+        begin
+            if rising_edge(clk_16M00) then
+                if counter = "1111" then
+                    crtc_clken <= '1';
+                else
+                    crtc_clken <= '0';
+                end if;
+                counter := counter + 1;
+                -- Generate a cursor signal that is delayed by 2 characters
+                if crtc_clken = '1' then
+                    crtc_cursor1 <= crtc_cursor;
+                    crtc_cursor2 <= crtc_cursor1;
+                end if;
+            end if;
+        end process;
+
+        using_ext_ttxt_clock : if UseTTxtClock generate
+            -- Use external 96 MHz clock / 12 MHz enable
+            ttxt_clock <= clk_ttxt;
+            ttxt_clken <= clken_ttxt_12M;
+        end generate;
+
+        using_24mhz_ttxt_clock : if not UseTTxtClock generate
+            -- Use 24 MHz clock and generate 12 MHz enable
+            ttxt_clock <= clk_24M00;
+            process (clk_24M00)
+            begin
+                if rising_edge(clk_24M00) then
+                    ttxt_clken <= not ttxt_clken;
+                end if;
+            end process;
+        end generate;
+
+        crtc_enable <= '1' when addr(15 downto 0) = x"fc1c" or
+                                addr(15 downto 0) = x"fc1d" or
+                                addr(15 downto 0) = x"fc1f"
+                           else '0';
+
+        status_enable <= '1' when addr(15 downto 0) = x"fc1e" else '0';
+
+        status_do <= "00" & ttxt_dew & "00000";
+
+        crtc : entity work.mc6845 port map (
+            -- inputs
+            CLOCK  => clk_16M00,
+            CLKEN  => crtc_clken,
+            nRESET => RST_n,
+            ENABLE => crtc_enable,
+            R_nW   => R_W_n,
+            RS     => addr(0),
+            DI     => data_in,
+            LPSTB  => '0',
+            -- outputs
+            DO     => crtc_do,
+            VSYNC  => crtc_vsync,
+            HSYNC  => crtc_hsync,
+            DE     => crtc_de,
+            CURSOR => crtc_cursor,
+            MA     => crtc_ma,
+            RA     => crtc_ra
+        );
+
+        crtc_hsync_n <= not crtc_hsync;
+        crtc_vsync_n <= not crtc_vsync;
+
+        ttxt_glr <= crtc_hsync_n;
+        ttxt_dew <= crtc_vsync;
+        ttxt_crs <= not crtc_ra(0);
+        ttxt_lose <= crtc_de;
+
+        teletext : entity work.saa5050
+        generic map (
+            IncludeTTxtROM => IncludeTTxtROM
+        )
+        port map (
+            -- inputs
+            CLOCK    => ttxt_clock,
+            CLKEN    => ttxt_clken,
+            nRESET   => RST_n,
+            DI_CLOCK => clk_16M00,
+            DI_CLKEN => '1',
+            DI       => screen_data(6 downto 0),
+            GLR      => '0', -- SAA5050.vhd doesn't do anything with this...
+            DEW      => ttxt_dew,
+            CRS      => ttxt_crs,
+            LOSE     => ttxt_lose,
+            -- outputs
+            R        => ttxt_r_int,
+            G        => ttxt_g_int,
+            B        => ttxt_b_int,
+            -- SAA5050 character ROM loading
+            char_rom_we   => char_rom_we,
+            char_rom_addr => char_rom_addr,
+            char_rom_data => char_rom_data
+        );
+
+        -- make the cursor visible
+        ttxt_r <= ttxt_r_int xor crtc_cursor2;
+        ttxt_g <= ttxt_g_int xor crtc_cursor2;
+        ttxt_b <= ttxt_b_int xor crtc_cursor2;
+
+        -- enable mode 7
+        mode7_enable <= crtc_ma(13);
+    end generate;
 
     -- DEBUGGING FSM STATES
     -- RESET, ROW_LATCH, COL1_LATCH, COL1_READ, COL1_RESET, COL2_LATCH, COL2_READ, ROWCOL2_RESET, EXTLATCH_RESET
