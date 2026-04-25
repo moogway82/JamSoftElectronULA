@@ -61,9 +61,6 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity saa5050 is
-generic (
-    IncludeTTxtROM : boolean -- false if the SAA5050 character ROM needs loading
-    );
 port (
     CLOCK       :   in  std_logic;
     -- 6 MHz dot clock enable
@@ -91,12 +88,7 @@ port (
     R           :   out std_logic;
     G           :   out std_logic;
     B           :   out std_logic;
-    Y           :   out std_logic;
-
-    -- SAA5050 character ROM loading
-    char_rom_we   : in std_logic := '0';
-    char_rom_addr : in std_logic_vector(11 downto 0) := (others => '0');
-    char_rom_data : in std_logic_vector(7 downto 0) := (others => '0')
+    Y           :   out std_logic
     );
 end entity;
 
@@ -473,8 +465,7 @@ begin
 
     hold_active <= '1' when gfx_hold = '1' and code_r(6 downto 5) = "00" else '0';
 
-    rom_address1 <= char_rom_addr when char_rom_we = '1' and not IncludeTTxtROM else
-                    (others => '0') when (double_high = '0' and double_high2 = '1') else
+    rom_address1 <= (others => '0') when (double_high = '0' and double_high2 = '1') else
                     gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
                     gfx & code_r & std_logic_vector(line_addr);
 

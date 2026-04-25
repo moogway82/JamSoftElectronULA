@@ -5,17 +5,18 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA_TB2 is
   generic (
     run_sound_out_test  : boolean := false;
-    run_rgb_test        : boolean := true;
+    run_rgb_test        : boolean := false;
     rgb_test_quick      : boolean := false;
-    run_turbo_mode      : boolean := true;
-    run_ram_test        : boolean := true;
+    run_turbo_mode      : boolean := false;
+    run_ram_test        : boolean := false;
     ram_test_quick      : boolean := false; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
     run_caps_test       : boolean := false;
     run_phi_test        : boolean := false;
-    run_sync_ram_slot   : boolean := true;
-    run_paging_test     : boolean := true
+    run_sync_ram_slot   : boolean := false;
+    run_paging_test     : boolean := false;
+    run_mode7_test : boolean := true
   );
 end;
 
@@ -914,6 +915,272 @@ begin
     assert ROM_n = '1' report "ROM_n should go low as BASIC should still be paged in." severity error;
 
   end if;
+
+    -------------------------------
+    -- 9. MODE 7 Tests
+    -------------------------------  
+
+--Registers
+--R0 Horizontal total &3F (63)
+--R1 Characters per line &28 (40)
+--R2 Horizontal sync position &33 (51)
+--R3 Horizontal sync width &04 (4)
+--Vertical sync time &02 (2)
+--R4 Vertical total &1E (30)
+--R5 Vertical total adjust &02 (2)
+--R6 Vertical displayed characters &19 (25)
+--R7 Vertical sync position &1B (27)
+--R8 Interlace mode bits 0,1 &01 (1)
+--Display delay bits 4,5 &01 (1)
+--Cursor delay bits 6,7 &02 (2)
+--R9 Scan lines per character &12 (18)
+--R10 Cursor start, blink, type &72 (114)
+--Cursor start (bits 0-4) &12 (18)
+--Cursor blink (bit 6) &01 (1)
+--Cursor type (bit 5) &01 (1)
+--R11 Cursor end &13 (19)
+--R12,R13 Screen start address Variable
+--R14,R15 Cursor position Variable
+--R16,R17 Light pen position Variable
+
+  if run_mode7_test = true then
+
+
+    -- Write some bytes
+    rgb_test_vram_addr := x"7C00";
+    for i in 0 to 1023 loop
+      wait until falling_edge(cpu_clk_out);
+      wait for cpu_addr_ready;
+      addr <= rgb_test_vram_addr;
+      data <=  x"4" & std_logic_vector(to_unsigned( i, 4));
+      R_W_n <= '0';
+      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+    end loop;
+
+--R0 Horizontal total &3F (63)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"00"; --R0 Horizontal total &3F (63)
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"3F"; --R0 Horizontal total &3F (63)
+    R_W_n <= '0';
+
+--R1 Characters per line &28 (40)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"01"; --R1 Characters per line &28 (40)
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"28"; --R1 Characters per line &28 (40)
+    R_W_n <= '0';
+
+--R2 Horizontal sync position &33 (51)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"02";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"33"; 
+    R_W_n <= '0';
+
+--R3 Horizontal sync width &04 (4)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"03";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"04"; 
+    R_W_n <= '0';
+
+--R4 Vertical total &1E (30)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"04";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"1E"; 
+    R_W_n <= '0';
+
+--R5 Vertical total adjust &02 (2)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"05";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"02"; 
+    R_W_n <= '0';
+
+--R6 Vertical displayed characters &19 (25)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"06";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"19"; 
+    R_W_n <= '0';
+
+--R7 Vertical sync position &1B (27)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"07";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"1B"; 
+    R_W_n <= '0';
+
+--R8 Interlace mode bits 0,1 &01 (1)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"08";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"01"; 
+    R_W_n <= '0';
+
+--R9 Scan lines per character &12 (18)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"09";
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"12"; 
+    R_W_n <= '0';
+
+--R10 Cursor start, blink, type &72 (114)
+--R11 Cursor end &13 (19)
+--R12,R13 Screen start address Variable
+--R14,R15 Cursor position Variable
+--R16,R17 Light pen position Variable
+
+      -- Set Cursor Position and thickness
+    -- Start Line
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0A"; --R10 Start Char Row & Blink
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"01"; -- b65 "00" always-on, b40 start  BBC Mode 7
+    R_W_n <= '0';
+    -- End Line
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0B"; --R11 End Char Row & Blink
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"13"; -- b40 BBC mode 7
+    R_W_n <= '0';
+    -- Cursor Pos H
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0E"; --R14 Cursor Pos H
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"7C"; 
+    R_W_n <= '0';
+    -- Cursor Pos L
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0F"; --R15 Cursor Pos L
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"30"; 
+    R_W_n <= '0';
+
+        -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0C"; -- &12
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"7C"; -- &3000
+    R_W_n <= '0';
+
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0D"; -- &13
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"28"; -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= (others => 'Z'); 
+    R_W_n <= '1';
+
+    end if;
+
+
+    wait for 80 ms;
 
 
   

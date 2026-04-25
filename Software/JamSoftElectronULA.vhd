@@ -275,13 +275,11 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_b_out     :   std_logic;
   signal ttxt_hs_out    :   std_logic;
   signal ttxt_vs_out    :   std_logic;
-
-  -- SAA5050 character ROM loading
-  signal char_rom_we   :  std_logic := '0';
-  signal char_rom_addr :  std_logic_vector(11 downto 0) := (others => '0');
-  signal char_rom_data :  std_logic_vector(7 downto 0) := (others => '0');
+  signal ttxt_di        :   std_logic_vector(6 downto 0);
 
   signal mode7_enable   :   std_logic;
+
+  signal debug_crtc_clk_counter : std_logic_vector(3 downto 0);
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -1499,23 +1497,28 @@ begin
         -- FC1E - Read status register - only bit 5 (vsync) is implemented
         -- FC1F - Read data register
 
-        process (clk_16M00)
-        variable counter : std_logic_vector(3 downto 0);
+        process (clk_16M00, RST_IN_n)
+        variable crtc_clken_counter : std_logic_vector(3 downto 0);
         begin
-            if rising_edge(clk_16M00) then
-                if counter = "1111" then
+            if RST_IN_n = '0' then
+                crtc_clken_counter := (others => '0');
+            elsif rising_edge(clk_16M00) then
+                if crtc_clken_counter = "1111" then
                     crtc_clken <= '1';
                 else
                     crtc_clken <= '0';
                 end if;
-                counter := counter + 1;
+                crtc_clken_counter := crtc_clken_counter + 1;
                 -- Generate a cursor signal that is delayed by 2 characters
                 if crtc_clken = '1' then
                     crtc_cursor1 <= crtc_cursor;
                     crtc_cursor2 <= crtc_cursor1;
                 end if;
+                debug_crtc_clk_counter <= crtc_clken_counter;
+
             end if;
         end process;
+
 
         crtc_enable <= '1' when addr(15 downto 0) = x"fc1c" or
                                 addr(15 downto 0) = x"fc1d" or
@@ -1555,9 +1558,6 @@ begin
         ttxt_lose <= crtc_de;
 
         teletext : entity work.saa5050
-        generic map (
-            IncludeTTxtROM => true
-        )
         port map (
             -- inputs
             CLOCK    => clk_16M00,
@@ -1565,7 +1565,7 @@ begin
             nRESET   => RST_IN_n,
             DI_CLOCK => clk_16M00,
             DI_CLKEN => '1',
-            DI       => screen_data(6 downto 0),
+            DI       => ttxt_di,
             GLR      => '0', -- SAA5050.vhd doesn't do anything with this...
             DEW      => ttxt_dew,
             CRS      => ttxt_crs,
@@ -1573,13 +1573,10 @@ begin
             -- outputs
             R        => ttxt_r_int,
             G        => ttxt_g_int,
-            B        => ttxt_b_int,
-            -- SAA5050 character ROM loading
-            char_rom_we   => char_rom_we,
-            char_rom_addr => char_rom_addr,
-            char_rom_data => char_rom_data
+            B        => ttxt_b_int
         );
 
+        ttxt_di <= screen_data(6 downto 0);
         -- make the cursor visible
         ttxt_r <= ttxt_r_int xor crtc_cursor2;
         ttxt_g <= ttxt_g_int xor crtc_cursor2;
