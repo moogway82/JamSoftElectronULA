@@ -992,7 +992,7 @@ begin
           if h_count < h_active then
               if (mode_40 = '0' and h_count(2 downto 0) = "000") or (mode_40 = '1' and h_count(3 downto 0) = "1000") then
                   byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
-                  -- Delay the Mode 7 cursor by 1 character
+                  -- Delay the Mode 7 cursor by 2 characters
                   ttxt_cursor_delay1 <= ttxt_cursor;
                   ttxt_cursor_delay2 <= ttxt_cursor_delay1;
               end if;
@@ -1611,7 +1611,7 @@ begin
           end if;
 
           -- time the cusor
-          if (ttxt_clk_count = 1) then
+          if (ttxt_clk_count = 3) then
             ttxt_cursor_delay3 <= ttxt_cursor_delay2;
           end if;
         end if;

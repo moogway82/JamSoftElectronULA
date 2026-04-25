@@ -996,7 +996,7 @@ begin
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
-    data <= x"10"; -- b65 "00" always-on, b40 start  BBC Mode 7
+    data <= x"01"; -- b65 "00" always-on, b40 start  BBC Mode 7
     R_W_n <= '0';
     -- End Line
     wait until falling_edge(cpu_clk_out);
@@ -1026,13 +1026,13 @@ begin
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1C";
-    data <= x"0F"; --R14 Cursor Pos L
+    data <= x"0F"; --R15 Cursor Pos L
     R_W_n <= '0';
     -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
-    data <= x"01"; 
+    data <= x"30"; 
     R_W_n <= '0';
 
     wait for 40 ms;
