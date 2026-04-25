@@ -15,11 +15,12 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
     generic (
-        JafaIncluded  : boolean := true;
+        IncludeJafaMode7  : boolean := true;
         IncludeTurbo  : boolean := false
     );
     port (
@@ -238,6 +239,49 @@ architecture behavioral of JamSoftElectronULA is
   type dramc_fsm_type is (RESET, ROW_LATCH, COL1_LATCH, COL1_READ, COL1_RESET, COL2_LATCH, COL2_READ, ROWCOL2_RESET, EXTLATCH_RESET);
   signal DRAMC_PS, DRAMC_NS : dramc_fsm_type;
   --signal DRAMC_PS_DEBUG, DRAMC_NS_DEBUG : std_logic_vector(3 downto 0);
+
+   -- CRTC signals (only used when Jafa Mode 7 is enabled)
+  signal crtc_enable    :   std_logic;
+  signal crtc_clken     :   std_logic;
+  signal crtc_do        :   std_logic_vector(7 downto 0);
+  signal crtc_vsync     :   std_logic;
+  signal crtc_vsync_n   :   std_logic;
+  signal crtc_hsync     :   std_logic;
+  signal crtc_hsync_n   :   std_logic;
+  signal crtc_de        :   std_logic;
+  signal crtc_cursor    :   std_logic;
+  signal crtc_cursor1   :   std_logic;
+  signal crtc_cursor2   :   std_logic;
+  signal crtc_ma        :   std_logic_vector(13 downto 0);
+  signal crtc_ra        :   std_logic_vector(4 downto 0);
+  signal status_enable  :   std_logic;
+  signal status_do      :   std_logic_vector(7 downto 0);
+
+  -- SAA5050 signals (only used when Jafa Mode 7 is enabled)
+  signal ttxt_clock     :   std_logic;
+  signal ttxt_clken     :   std_logic;
+  signal ttxt_glr       :   std_logic;
+  signal ttxt_dew       :   std_logic;
+  signal ttxt_crs       :   std_logic;
+  signal ttxt_lose      :   std_logic;
+  signal ttxt_r_int     :   std_logic;
+  signal ttxt_g_int     :   std_logic;
+  signal ttxt_b_int     :   std_logic;
+  signal ttxt_r         :   std_logic;
+  signal ttxt_g         :   std_logic;
+  signal ttxt_b         :   std_logic;
+  signal ttxt_r_out     :   std_logic;
+  signal ttxt_g_out     :   std_logic;
+  signal ttxt_b_out     :   std_logic;
+  signal ttxt_hs_out    :   std_logic;
+  signal ttxt_vs_out    :   std_logic;
+
+  -- SAA5050 character ROM loading
+  signal char_rom_we   :  std_logic := '0';
+  signal char_rom_addr :  std_logic_vector(11 downto 0) := (others => '0');
+  signal char_rom_data :  std_logic_vector(7 downto 0) := (others => '0');
+
+  signal mode7_enable   :   std_logic;
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -1037,13 +1081,13 @@ begin
 
     end process;
 
-    red   <= (others => ttxt_r_out) when mode7_enable = '1' else
+    red   <= ttxt_r_out when mode7_enable = '1' else
              red_int;
 
-    green <= (others => ttxt_g_out) when mode7_enable = '1' else
+    green <= ttxt_g_out when mode7_enable = '1' else
              green_int;
 
-    blue  <= (others => ttxt_b_out) when mode7_enable = '1' else
+    blue  <= ttxt_b_out when mode7_enable = '1' else
              blue_int;
 
     --vsync <= ttxt_vs_out when mode7_enable = '1' else
@@ -1420,7 +1464,7 @@ begin
 -- Optional Jafa Mk1 Compatible Mode 7 Implementation
 --------------------------------------------------------
 
-    JafaIncluded: if IncludeMode7 generate
+    JafaIncluded: if IncludeJafaMode7 generate
 
         -- Generate the 6MHz Dot Clock for Mode 7
         p_gen_ttxt_clken : process(clk_16M00, RST_IN_n)
@@ -1429,7 +1473,6 @@ begin
           if RST_IN_n = '0' then
               ttxt_clk_count := (others => '0');
               ttxt_clken <= '0';
-              ttxt_cursor_delay3 <= '0';
           elsif rising_edge(clk_16M00) then
             ttxt_clken <= not ttxt_clken;
 
@@ -1448,10 +1491,6 @@ begin
                 ttxt_clken <= '0';
             end if;
 
-            -- time the cusor
-            if (ttxt_clk_count = 3) then
-              ttxt_cursor_delay3 <= ttxt_cursor_delay2;
-            end if;
           end if;
         end process p_gen_ttxt_clken;
 
@@ -1478,23 +1517,6 @@ begin
             end if;
         end process;
 
-        using_ext_ttxt_clock : if UseTTxtClock generate
-            -- Use external 96 MHz clock / 12 MHz enable
-            ttxt_clock <= clk_ttxt;
-            ttxt_clken <= clken_ttxt_12M;
-        end generate;
-
-        using_24mhz_ttxt_clock : if not UseTTxtClock generate
-            -- Use 24 MHz clock and generate 12 MHz enable
-            ttxt_clock <= clk_24M00;
-            process (clk_24M00)
-            begin
-                if rising_edge(clk_24M00) then
-                    ttxt_clken <= not ttxt_clken;
-                end if;
-            end process;
-        end generate;
-
         crtc_enable <= '1' when addr(15 downto 0) = x"fc1c" or
                                 addr(15 downto 0) = x"fc1d" or
                                 addr(15 downto 0) = x"fc1f"
@@ -1508,7 +1530,7 @@ begin
             -- inputs
             CLOCK  => clk_16M00,
             CLKEN  => crtc_clken,
-            nRESET => RST_n,
+            nRESET => RST_IN_n,
             ENABLE => crtc_enable,
             R_nW   => R_W_n,
             RS     => addr(0),
@@ -1534,13 +1556,13 @@ begin
 
         teletext : entity work.saa5050
         generic map (
-            IncludeTTxtROM => IncludeTTxtROM
+            IncludeTTxtROM => true
         )
         port map (
             -- inputs
-            CLOCK    => ttxt_clock,
+            CLOCK    => clk_16M00,
             CLKEN    => ttxt_clken,
-            nRESET   => RST_n,
+            nRESET   => RST_IN_n,
             DI_CLOCK => clk_16M00,
             DI_CLKEN => '1',
             DI       => screen_data(6 downto 0),
