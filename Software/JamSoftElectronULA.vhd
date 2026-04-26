@@ -1213,11 +1213,11 @@ begin
 
     end process;
 
-    red   <=  ttxt_r_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
+    red   <=  ttxt_r_int xor ttxt_cursor_delay4 when mode_ttxt = '1' else
               red_int;
-    green <=  ttxt_g_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
+    green <=  ttxt_g_int xor ttxt_cursor_delay4 when mode_ttxt = '1' else
               green_int;
-    blue  <=  ttxt_b_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
+    blue  <=  ttxt_b_int xor ttxt_cursor_delay4 when mode_ttxt = '1' else
               blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     HS_n  <= hsync_int;
@@ -1618,7 +1618,7 @@ begin
           end if;
 
           -- time the cusor
-          if (ttxt_clk_count = 0) then
+          if (ttxt_clk_count = 5) then
             ttxt_cursor_delay3 <= ttxt_cursor_delay2;
             ttxt_cursor_delay4 <= ttxt_cursor_delay3;
           end if;
