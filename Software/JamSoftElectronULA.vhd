@@ -395,6 +395,8 @@ begin
                 "0000" & (kbd xor "1111") when kbd_access = '1' else
                 isr_data                  when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"0" else
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
+                crtc_do                   when crtc_enable = '1' and IncludeJafaMode7 else
+                status_do                 when status_enable = '1' and IncludeJafaMode7 else
                 x"F1"; -- todo FIXEME
 
     -- ** DONT FORGET TO UPDATE THIS IS DECODING ANY NEW ADDRESS RANGES OTHERWISE FPGA WILL NOT SEE DATA BUS **
@@ -405,6 +407,8 @@ begin
     data_en  <= '1'                       when addr(15) = '0' else
                 '1'                       when kbd_access = '1' else
                 '1'                       when addr(15 downto 8) = x"FE" else
+                '1'                       when crtc_enable = '1' and IncludeJafaMode7 else
+                '1'                       when status_enable = '1' and IncludeJafaMode7 else
                 '0';
 
     -- The data buffer enable is active LOW
@@ -911,8 +915,11 @@ begin
           end if;
 
           -- Screen_addr is the final 15-bit Video RAM address
-          screen_addr <= byte_addr & char_row(2 downto 0);
-
+          if mode7_enable = '1' then
+              screen_addr <= "11111" & crtc_ma(9 downto 0);
+          else
+              screen_addr <= byte_addr & char_row(2 downto 0);
+          end if;
 
           -- Pixels start being plotted on a row at h_count=0 so need to have the 
           -- Screen Data ready for then.
@@ -1584,6 +1591,17 @@ begin
 
         -- enable mode 7
         mode7_enable <= crtc_ma(13);
+
+        ttxt_r_out  <= ttxt_r;
+        ttxt_g_out  <= ttxt_g;
+        ttxt_b_out  <= ttxt_b;
+        ttxt_vs_out <= '1';
+        ttxt_hs_out <= crtc_hsync_n and crtc_vsync_n;
+    end generate;
+
+    JafaNotIncluded: if not IncludeJafaMode7 generate
+        -- disable mode 7
+        mode7_enable <= '0';
     end generate;
 
     -- DEBUGGING FSM STATES

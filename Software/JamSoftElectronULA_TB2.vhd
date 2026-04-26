@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA_TB2 is
   generic (
     run_sound_out_test  : boolean := false;
-    run_rgb_test        : boolean := false;
+    run_rgb_test        : boolean := true;
     rgb_test_quick      : boolean := false;
     run_turbo_mode      : boolean := false;
     run_ram_test        : boolean := false;
@@ -16,7 +16,7 @@ entity JamSoftElectronULA_TB2 is
     run_phi_test        : boolean := false;
     run_sync_ram_slot   : boolean := false;
     run_paging_test     : boolean := false;
-    run_mode7_test : boolean := true
+    run_mode7_test      : boolean := true
   );
 end;
 
@@ -963,7 +963,6 @@ begin
     addr <= x"FC1C";
     data <= x"00"; --R0 Horizontal total &3F (63)
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -976,7 +975,6 @@ begin
     addr <= x"FC1C";
     data <= x"01"; --R1 Characters per line &28 (40)
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -989,7 +987,6 @@ begin
     addr <= x"FC1C";
     data <= x"02";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -1002,11 +999,10 @@ begin
     addr <= x"FC1C";
     data <= x"03";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
-    data <= x"04"; 
+    data <= x"24"; 
     R_W_n <= '0';
 
 --R4 Vertical total &1E (30)
@@ -1015,7 +1011,6 @@ begin
     addr <= x"FC1C";
     data <= x"04";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -1028,7 +1023,6 @@ begin
     addr <= x"FC1C";
     data <= x"05";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -1041,7 +1035,6 @@ begin
     addr <= x"FC1C";
     data <= x"06";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -1054,7 +1047,6 @@ begin
     addr <= x"FC1C";
     data <= x"07";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -1067,11 +1059,10 @@ begin
     addr <= x"FC1C";
     data <= x"08";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
-    data <= x"01"; 
+    data <= x"03"; 
     R_W_n <= '0';
 
 --R9 Scan lines per character &12 (18)
@@ -1080,7 +1071,6 @@ begin
     addr <= x"FC1C";
     data <= x"09";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
@@ -1088,94 +1078,95 @@ begin
     R_W_n <= '0';
 
 --R10 Cursor start, blink, type &72 (114)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0A";
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"72"; 
+    R_W_n <= '0';
+
 --R11 Cursor end &13 (19)
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0B";
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"13"; 
+    R_W_n <= '0';
+
 --R12,R13 Screen start address Variable
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0C";
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"28"; 
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0D";
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"00"; 
+    R_W_n <= '0';
+
 --R14,R15 Cursor position Variable
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0E";
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"28"; 
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0F";
+    R_W_n <= '0';
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"01"; 
+    R_W_n <= '0';
+
 --R16,R17 Light pen position Variable
-
-      -- Set Cursor Position and thickness
-    -- Start Line
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1C";
-    data <= x"0A"; --R10 Start Char Row & Blink
+    data <= x"10";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
-    data <= x"01"; -- b65 "00" always-on, b40 start  BBC Mode 7
+    data <= x"00"; 
     R_W_n <= '0';
-    -- End Line
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1C";
-    data <= x"0B"; --R11 End Char Row & Blink
+    data <= x"11";
     R_W_n <= '0';
-    -- Set Cursor Position and thickness
     wait until falling_edge(cpu_clk_out);
     wait for cpu_addr_ready;
     addr <= x"FC1D";
-    data <= x"13"; -- b40 BBC mode 7
-    R_W_n <= '0';
-    -- Cursor Pos H
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1C";
-    data <= x"0E"; --R14 Cursor Pos H
-    R_W_n <= '0';
-    -- Set Cursor Position and thickness
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1D";
-    data <= x"7C"; 
-    R_W_n <= '0';
-    -- Cursor Pos L
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1C";
-    data <= x"0F"; --R15 Cursor Pos L
-    R_W_n <= '0';
-    -- Set Cursor Position and thickness
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1D";
-    data <= x"30"; 
+    data <= x"00"; 
     R_W_n <= '0';
 
-        -- 6845ish reg address reg fc1c
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1C";
-    data <= x"0C"; -- &12
-    R_W_n <= '0';
-
-    -- 6845ish reg data reg fc1d
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1D";
-    data <= x"7C"; -- &3000
-    R_W_n <= '0';
-
-    -- 6845ish reg address reg fc1c
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1C";
-    data <= x"0D"; -- &13
-    R_W_n <= '0';
-
-    -- 6845ish reg data reg fc1d
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"FC1D";
-    data <= x"28"; -- &3000
-    R_W_n <= '0';
-
-    wait until falling_edge(cpu_clk_out);
-    wait for cpu_addr_ready;
-    addr <= x"0000";
-    data <= (others => 'Z'); 
-    R_W_n <= '1';
 
     end if;
 
