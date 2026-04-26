@@ -265,12 +265,15 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_cursor_delay1 : std_logic;
   signal ttxt_cursor_delay2 : std_logic;
   signal ttxt_cursor_delay3 : std_logic;
+  signal ttxt_cursor_delay4 : std_logic;
   -- signal ttxt_cursor_delay4 : std_logic;
   signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
   signal ttxt_cursor_start : std_logic_vector(6 downto 0);
   signal ttxt_cursor_end : std_logic_vector(4 downto 0);
   signal ttxt_cursor_blink : std_logic_vector(5 downto 0);
   signal jafa_mode7_enable : std_logic;
+
+  signal dbg_ttxt_clk_count : std_logic_vector(3 downto 0);
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -992,10 +995,13 @@ begin
           if h_count < h_active then
               if (mode_40 = '0' and h_count(2 downto 0) = "000") or (mode_40 = '1' and h_count(3 downto 0) = "1000") then
                   byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
-                  -- Delay the Mode 7 cursor by 2 characters
+              end if;
+          end if;
+
+          if h_count(3 downto 0) = "1000" then
+            -- Delay the Mode 7 cursor by 2 characters
                   ttxt_cursor_delay1 <= ttxt_cursor;
                   ttxt_cursor_delay2 <= ttxt_cursor_delay1;
-              end if;
           end if;
 
           -- Handle wrap-around back to mode_base
@@ -1592,6 +1598,7 @@ begin
             ttxt_clk_count := (others => '0');
             ttxt_clken <= '0';
             ttxt_cursor_delay3 <= '0';
+            ttxt_cursor_delay4 <= '0';
         elsif rising_edge(clk_16M00) then
           ttxt_clken <= not ttxt_clken;
 
@@ -1611,9 +1618,12 @@ begin
           end if;
 
           -- time the cusor
-          if (ttxt_clk_count = 3) then
+          if (ttxt_clk_count = 0) then
             ttxt_cursor_delay3 <= ttxt_cursor_delay2;
+            ttxt_cursor_delay4 <= ttxt_cursor_delay3;
           end if;
+
+          dbg_ttxt_clk_count <= std_logic_vector(ttxt_clk_count);
         end if;
       end process p_gen_ttxt_clken;
 
