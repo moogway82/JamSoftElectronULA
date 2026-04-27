@@ -1618,7 +1618,7 @@ begin
           end if;
 
           -- time the cusor
-          if (ttxt_clk_count = 5) then
+          if (ttxt_clk_count = 4) then
             ttxt_cursor_delay3 <= ttxt_cursor_delay2;
             ttxt_cursor_delay4 <= ttxt_cursor_delay3;
           end if;
