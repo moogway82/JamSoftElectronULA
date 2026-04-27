@@ -951,7 +951,7 @@ begin
       wait until falling_edge(cpu_clk_out);
       wait for cpu_addr_ready;
       addr <= rgb_test_vram_addr;
-      data <=  x"4" & std_logic_vector(to_unsigned( i, 4));
+      data <=  "0" & std_logic_vector(to_unsigned( i, 3)) & "0001";
       R_W_n <= '0';
       rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
     end loop;

@@ -256,9 +256,9 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_b_int : std_logic;
   signal jafa_reg_addr : std_logic_vector(7 downto 0);
   signal jafa_screen_base : std_logic_vector(13 downto 0);
-  signal char_rom_we : std_logic;
-  signal char_rom_addr : std_logic_vector(11 downto 0);
-  signal char_rom_data : std_logic_vector(7 downto 0);
+  --signal char_rom_we : std_logic;
+  --signal char_rom_addr : std_logic_vector(11 downto 0);
+  --signal char_rom_data : std_logic_vector(7 downto 0);
   signal jafa_do : std_logic_vector(7 downto 0);
   signal jafa_enable : std_logic;
   signal ttxt_cursor : std_logic;
@@ -463,7 +463,8 @@ begin
     begin
 
         if rising_edge(clk_16M00) then
-
+            -- TODO: Should we move this to *not* be async and not clocked with 16M? Everyother reg is async and I
+            -- wonder that that results in things getting out of step a little?
             if (RST_IN_n = '0') then
 
                isr             <= (others => '0');
@@ -1660,11 +1661,11 @@ begin
           -- outputs
           R        => ttxt_r_int,
           G        => ttxt_g_int,
-          B        => ttxt_b_int,
+          B        => ttxt_b_int
           -- SAA5050 character ROM loading - not needed...
-          char_rom_we   => char_rom_we,
-          char_rom_addr => char_rom_addr,
-          char_rom_data => char_rom_data
+          --char_rom_we   => char_rom_we,
+          --char_rom_addr => char_rom_addr,
+          --char_rom_data => char_rom_data
         );
 
       ttxt_di <= screen_data(6 downto 0);

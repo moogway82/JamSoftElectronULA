@@ -11,9 +11,9 @@ entity saa5050_rom_dual_port is
     port(
         clock    : in  std_logic;
         addressA : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
-        QA       : out std_logic_vector(DATA_WIDTH-1 downto 0);
-        addressB : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
-        QB       : out std_logic_vector(DATA_WIDTH-1 downto 0)
+        QA       : out std_logic_vector(DATA_WIDTH-1 downto 0)
+        --addressB : in  std_logic_vector(ADDR_WIDTH-1 downto 0);
+        --QB       : out std_logic_vector(DATA_WIDTH-1 downto 0)
   );
 end saa5050_rom_dual_port;
 
@@ -546,10 +546,10 @@ architecture RTL of saa5050_rom_dual_port is
         end if;
     end process;
 
-    process(clock) is
-    begin
-        if (rising_edge(clock)) then    
-            QB <= std_logic_vector(mem(to_integer(unsigned(addressB))));
-        end if;
-    end process;
+    --process(clock) is
+    --begin
+    --    if (rising_edge(clock)) then    
+    --        QB <= std_logic_vector(mem(to_integer(unsigned(addressB))));
+    --    end if;
+    --end process;
 end RTL;
