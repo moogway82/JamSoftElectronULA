@@ -102,6 +102,8 @@ end entity;
 
 architecture rtl of saa5050 is
 
+    attribute keep : string;
+
 -- Register inputs in the bus clock domain
 signal di_r         :   std_logic_vector(6 downto 0);
 signal dew_r        :   std_logic;
@@ -109,7 +111,7 @@ signal lose_r       :   std_logic;
 -- Data input registered in the pixel clock domain
 signal code         :   std_logic_vector(6 downto 0);
 signal line_addr    :   unsigned(3 downto 0);
-signal rom_address1 :   std_logic_vector(11 downto 0);
+signal rom_address1 :   std_logic_vector(10 downto 0);
 --signal rom_address2 :   std_logic_vector(11 downto 0);
 signal rom_data1    :   std_logic_vector(7 downto 0);
 --signal rom_data2    :   std_logic_vector(7 downto 0);
@@ -175,6 +177,20 @@ signal hold_active      : std_logic;
 signal double_high1 :   std_logic;
 -- Set in second row of double height
 signal double_high2 :   std_logic;
+-- Graphics Generator Circuit
+signal gfx_right_n : std_logic;
+attribute keep of gfx_right_n : signal is "true";
+
+signal gfx_left_n  : std_logic;
+attribute keep of gfx_left_n : signal is "true";
+
+signal gfx_right1  : std_logic;
+signal gfx_right2  : std_logic;
+signal gfx_right3  : std_logic;
+signal gfx_left1   : std_logic;
+signal gfx_left2   : std_logic;
+signal gfx_left3   : std_logic;
+signal gfx_middle  : std_logic;
 
 begin
 
@@ -473,10 +489,11 @@ begin
 
     hold_active <= '1' when gfx_hold = '1' and code_r(6 downto 5) = "00" else '0';
 
-    rom_address1 <= -- char_rom_addr when char_rom_we = '1' and not IncludeTTxtROM else
-                    (others => '0') when (double_high = '0' and double_high2 = '1') else
+    rom_address1 <= (others => '0') when (double_high = '0' and double_high2 = '1') else
                     gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
                     gfx & code_r & std_logic_vector(line_addr);
+                    -- char_rom_addr when char_rom_we = '1' and not IncludeTTxtROM else
+
 
     -- reference row for character rounding
     --rom_address2 <= rom_address1 + 1 when ((double_high = '0' and CRS = '1') or (double_high = '1' and line_counter(0) = '1')) else
@@ -485,16 +502,39 @@ begin
     -- If IncludeTTxtROM is true then we include the "ROM" version that is
     -- initialized with the mode 7 character set data
     -- (this is generally used for Xilinx builds)
-    char_rom_block: if IncludeTTxtROM generate
-        char_rom : entity work.saa5050_rom_dual_port port map (
+    --char_rom_block: if IncludeTTxtROM generate
+    --    char_rom : entity work.saa5050_rom_dual_port port map (
+    --        clock    => CLOCK,
+    --        addressA => rom_address1,
+    --        QA       => rom_data1
+    --        --addressB => rom_address2,
+    --        --QB       => rom_data2
+    --    );
+    --end generate;
+
+        char_rom : entity work.saa5050_rom_dual_port_min port map (
             clock    => CLOCK,
             addressA => rom_address1,
             QA       => rom_data1
             --addressB => rom_address2,
             --QB       => rom_data2
         );
-    end generate;
 
+    -- Graphics Generator
+    -- Copied from https://circuitverse.org/users/5735/projects/teletext-saa5050-0745b8b8-a20f-4084-9b51-10a0ebe3c802
+    -- No idea what it does, but if it works then it would save a chunk of BRAM space...
+    gfx_right_n <= not (gfx_right1 and gfx_right2 and gfx_right3);
+    gfx_left_n  <= not (gfx_left1 and gfx_left2 and gfx_left3);
+
+    gfx_right1  <= not (line_addr(3) and line_addr(2) and gfx_middle and not code_r(1));
+    gfx_right2  <= not (not line_addr(3) and gfx_middle and not code_r(6));
+    gfx_right3  <= not (not line_addr(2) and gfx_middle and not code_r(3));
+
+    gfx_left1   <= not (line_addr(3) and line_addr(2) and gfx_middle and not code_r(0));
+    gfx_left2   <= not (not line_addr(3) and gfx_middle and not code_r(3));
+    gfx_left3   <= not (not line_addr(2) and gfx_middle and not code_r(2));
+
+    gfx_middle  <= not (code_r(5) and code_r(6));
 
     -- If IncludeTTxtROM is false then we include the "RAM" version that is
     -- uninitialized, and needs loading during the core boostrap phase

@@ -83,6 +83,9 @@ end;
 
 architecture behavioral of JamSoftElectronULA is
 
+  attribute keep : string;
+
+
   signal hsync_int      : std_logic;
   signal hsync_int_last : std_logic;
   signal vsync_int      : std_logic;
