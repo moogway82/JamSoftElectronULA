@@ -178,11 +178,11 @@ signal double_high1 :   std_logic;
 -- Set in second row of double height
 signal double_high2 :   std_logic;
 -- Graphics Generator Circuit
-signal gfx_right_n : std_logic;
-attribute keep of gfx_right_n : signal is "true";
+signal gfx_right : std_logic;
+attribute keep of gfx_right : signal is "true";
 
-signal gfx_left_n  : std_logic;
-attribute keep of gfx_left_n : signal is "true";
+signal gfx_left  : std_logic;
+attribute keep of gfx_left : signal is "true";
 
 signal gfx_right1  : std_logic;
 signal gfx_right2  : std_logic;
@@ -490,8 +490,8 @@ begin
     hold_active <= '1' when gfx_hold = '1' and code_r(6 downto 5) = "00" else '0';
 
     rom_address1 <= (others => '0') when (double_high = '0' and double_high2 = '1') else
-                    gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
-                    gfx & code_r & std_logic_vector(line_addr);
+                    -- gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
+                    code_r & std_logic_vector(line_addr);
                     -- char_rom_addr when char_rom_we = '1' and not IncludeTTxtROM else
 
 
@@ -523,8 +523,8 @@ begin
     -- Graphics Generator
     -- Copied from https://circuitverse.org/users/5735/projects/teletext-saa5050-0745b8b8-a20f-4084-9b51-10a0ebe3c802
     -- No idea what it does, but if it works then it would save a chunk of BRAM space...
-    gfx_right_n <= not (gfx_right1 and gfx_right2 and gfx_right3);
-    gfx_left_n  <= not (gfx_left1 and gfx_left2 and gfx_left3);
+    gfx_right <= (gfx_right1 and gfx_right2 and gfx_right3);
+    gfx_left  <= (gfx_left1 and gfx_left2 and gfx_left3);
 
     gfx_right1  <= not (line_addr(3) and line_addr(2) and gfx_middle and not code_r(1));
     gfx_right2  <= not (not line_addr(3) and gfx_middle and not code_r(6));

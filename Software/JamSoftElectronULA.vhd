@@ -20,7 +20,7 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA is
     generic (
         IncludeMode7  : boolean := true;
-        IncludeTurbo  : boolean := false
+        IncludeTurbo  : boolean := true
     );
     port (
         clk_16M00 : in  std_logic;
@@ -82,9 +82,6 @@ entity JamSoftElectronULA is
 end;
 
 architecture behavioral of JamSoftElectronULA is
-
-  attribute keep : string;
-
 
   signal hsync_int      : std_logic;
   signal hsync_int_last : std_logic;
@@ -314,7 +311,25 @@ begin
 
     not_cpu_clk <= not cpu_clk;
 
-    TurboIncluded: if IncludeTurbo generate 
+    -- Using some of the BRAM for SAA5050 Character ROM
+    TurboIncluded_M7: if IncludeTurbo and IncludeMode7 generate 
+      -- Turbo RAM using 8K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      generic map (
+        ram_size => 6144
+      )
+      port map(
+          addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
+
+    -- All of the BRAM can be used for TURBO
+    TurboIncluded_nM7: if IncludeTurbo and not IncludeMode7 generate 
       -- Turbo RAM using 8K Block RAM on FPGA
       ula : entity work.turbo_ram 
       port map(
@@ -1243,9 +1258,22 @@ begin
                   '0';
 
     -- Use Block RAM to serve CPU
+    TurboRAMAccess_M7: if IncludeTurbo and IncludeMode7 generate 
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
+                        '1' when addr(15 downto 11) = "00010" and turbo = '1' else 
+                        '0';
+    end generate;
+
+    TurboRAMAccess_nM7: if IncludeTurbo and not IncludeMode7 generate 
     turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
                         '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
                         '0';
+    end generate;
+
+    NotTurboRAMAccess: if not IncludeTurbo generate
+    turbo_ram_access <= '0';
+    end generate;
+
 
     clk_gen1 : process(clk_16M00, POR_n)
     begin
