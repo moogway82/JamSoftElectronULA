@@ -20,7 +20,7 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA is
     generic (
         IncludeMode7  : boolean := true;
-        IncludeTurbo  : boolean := false
+        IncludeTurbo  : boolean := true
     );
     port (
         clk_16M00 : in  std_logic;
@@ -146,11 +146,11 @@ architecture behavioral of JamSoftElectronULA is
   signal screen_data    : std_logic_vector(7 downto 0);
 
   -- DEBUGGING screen address variables
-   signal pixel_debug : std_logic_vector(3 downto 0);
+  -- signal pixel_debug : std_logic_vector(3 downto 0);
   -- start address of current row block (8-10 lines)
-   signal row_addr_debug  : std_logic_vector(14 downto 6);
+  -- signal row_addr_debug  : std_logic_vector(14 downto 6);
   -- address within current line
-   signal byte_addr_debug : std_logic_vector(14 downto 3);
+  --  signal byte_addr_debug : std_logic_vector(14 downto 3);
 
   -- Screen Mode Registers
 
@@ -256,9 +256,6 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_b_int : std_logic;
   signal jafa_reg_addr : std_logic_vector(7 downto 0);
   signal jafa_screen_base : std_logic_vector(13 downto 0);
-  --signal char_rom_we : std_logic;
-  --signal char_rom_addr : std_logic_vector(11 downto 0);
-  --signal char_rom_data : std_logic_vector(7 downto 0);
   signal jafa_do : std_logic_vector(7 downto 0);
   signal jafa_enable : std_logic;
   signal ttxt_cursor : std_logic;
@@ -266,14 +263,13 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_cursor_delay2 : std_logic;
   signal ttxt_cursor_delay3 : std_logic;
   signal ttxt_cursor_delay4 : std_logic;
-  -- signal ttxt_cursor_delay4 : std_logic;
   signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
   signal ttxt_cursor_start : std_logic_vector(6 downto 0);
   signal ttxt_cursor_end : std_logic_vector(4 downto 0);
   signal ttxt_cursor_blink : std_logic_vector(5 downto 0);
   signal jafa_mode7_enable : std_logic;
 
-  signal dbg_ttxt_clk_count : std_logic_vector(3 downto 0);
+  -- signal dbg_ttxt_clk_count : std_logic_vector(3 downto 0);
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -1223,12 +1219,12 @@ begin
           end if;
         end if;
 
-      --DEBUG:
-       pixel_debug <= pixel;
-      -- start address of current row block (8-10 lines)
-       row_addr_debug <= row_addr;
-      -- address within current line
-       byte_addr_debug <= byte_addr;
+        --DEBUG:
+        -- pixel_debug <= pixel;
+        -- start address of current row block (8-10 lines)
+        -- row_addr_debug <= row_addr;
+        -- address within current line
+        -- byte_addr_debug <= byte_addr;
 
     end process;
 
@@ -1655,7 +1651,7 @@ begin
             ttxt_cursor_delay4 <= ttxt_cursor_delay3;
           end if;
 
-          dbg_ttxt_clk_count <= std_logic_vector(ttxt_clk_count);
+          -- dbg_ttxt_clk_count <= std_logic_vector(ttxt_clk_count);
         end if;
       end process p_gen_ttxt_clken;
 
@@ -1693,10 +1689,6 @@ begin
           R        => ttxt_r_int,
           G        => ttxt_g_int,
           B        => ttxt_b_int
-          -- SAA5050 character ROM loading - not needed...
-          --char_rom_we   => char_rom_we,
-          --char_rom_addr => char_rom_addr,
-          --char_rom_data => char_rom_data
         );
 
       ttxt_di <= screen_data(6 downto 0);

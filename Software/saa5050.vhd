@@ -493,64 +493,34 @@ begin
     rom_address1 <= (others => '0') when (double_high = '0' and double_high2 = '1') else
                     -- gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
                     code_r & std_logic_vector(line_addr);
-                    -- char_rom_addr when char_rom_we = '1' and not IncludeTTxtROM else
-
 
     -- reference row for character rounding
     --rom_address2 <= rom_address1 + 1 when ((double_high = '0' and CRS = '1') or (double_high = '1' and line_counter(0) = '1')) else
     --                rom_address1 - 1;
 
-    -- If IncludeTTxtROM is true then we include the "ROM" version that is
-    -- initialized with the mode 7 character set data
-    -- (this is generally used for Xilinx builds)
-    --char_rom_block: if IncludeTTxtROM generate
-    --    char_rom : entity work.saa5050_rom_dual_port port map (
-    --        clock    => CLOCK,
-    --        addressA => rom_address1,
-    --        QA       => rom_data1
-    --        --addressB => rom_address2,
-    --        --QB       => rom_data2
-    --    );
-    --end generate;
-
-        char_rom : entity work.saa5050_rom_dual_port_min port map (
-            clock    => CLOCK,
-            addressA => rom_address1,
-            QA       => rom_data1
-            --addressB => rom_address2,
-            --QB       => rom_data2
-        );
+    char_rom : entity work.saa5050_rom_dual_port_min port map (
+        clock    => CLOCK,
+        addressA => rom_address1,
+        QA       => rom_data1
+        --addressB => rom_address2,
+        --QB       => rom_data2
+    );
 
     -- Graphics Generator
     -- Copied from https://circuitverse.org/users/5735/projects/teletext-saa5050-0745b8b8-a20f-4084-9b51-10a0ebe3c802
     -- No idea what it does, but if it works then it would save a chunk of BRAM space...
-    gfx_right <= (gfx_right1 and gfx_right2 and gfx_right3);
-    gfx_left  <= (gfx_left1 and gfx_left2 and gfx_left3);
+    gfx_right <= (gfx_right1 or gfx_right2 or gfx_right3);
+    gfx_left  <= (gfx_left1 or gfx_left2 or gfx_left3);
 
-    gfx_right1  <= not (line_addr(3) and line_addr(2) and gfx_middle and not code_r(1));
-    gfx_right2  <= not (not line_addr(3) and gfx_middle and not code_r(6));
-    gfx_right3  <= not (not line_addr(2) and gfx_middle and not code_r(3));
+    gfx_right1  <= not (line_addr(3) or line_addr(2) or gfx_middle or not code_r(1));
+    gfx_right2  <= not (not line_addr(3) or gfx_middle or not code_r(6));
+    gfx_right3  <= not (not line_addr(2) or gfx_middle or not code_r(3));
 
-    gfx_left1   <= not (line_addr(3) and line_addr(2) and gfx_middle and not code_r(0));
-    gfx_left2   <= not (not line_addr(3) and gfx_middle and not code_r(3));
-    gfx_left3   <= not (not line_addr(2) and gfx_middle and not code_r(2));
+    gfx_left1   <= not (line_addr(2) or line_addr(3) or gfx_middle or not code_r(0));
+    gfx_left2   <= not (not line_addr(3) or gfx_middle or not code_r(4));
+    gfx_left3   <= not (not line_addr(2) or gfx_middle or not code_r(2));
 
-    gfx_middle  <= not (code_r(5) and code_r(6));
-
-    -- If IncludeTTxtROM is false then we include the "RAM" version that is
-    -- uninitialized, and needs loading during the core boostrap phase
-    -- (this is generally used for Altera builds)
-    --char_ram_block: if not IncludeTTxtROM generate
-    --    char_ram : entity work.saa5050_rom_dual_port_uninitialized port map (
-    --        clock    => CLOCK,
-    --        wea      => char_rom_we,
-    --        addressA => rom_address1,
-    --        dina     => char_rom_data,
-    --        QA       => rom_data1,
-    --        addressB => rom_address2,
-    --        QB       => rom_data2
-    --        );
-    --end generate;
+    gfx_middle  <= not (code_r(5) or code_r(6));
 
     char_data <=    (gfx_left & gfx_left & gfx_left & gfx_right & gfx_right & gfx_right) when code_r(5) = '1' and gfx = '1' else
                     rom_data1(5 downto 0);
@@ -583,10 +553,7 @@ begin
                     -- character and separated/hold graphics modes apply.
                     -- We don't just assume this to be the case if gfx=1 because
                     -- these modes don't apply to caps even in graphics mode
-                    -- CJ TODO: We should know it's a gfx character by the address
-                    -- and not need to look that up...
-                    if code(5) = '1' and gfx = '1' then
-                    --if rom_data1(7) = '1' then
+                    if code_r(5) = '1' and gfx = '1' then
                         -- Apply a mask for separated graphics mode
                         if (hold_active = '0' and gfx_sep = '1') or (hold_active = '1' and last_gfx_sep = '1') then
                             a(5) := '0';
@@ -599,12 +566,6 @@ begin
                         -- TODO: Bring rounding back - I've just commented this bit out for now
                         -- until I understand how to go from 12MHz to 6MHz pixel clock but do 
                         -- rounding...
-                        -- 
---IF pixelWest=1 AND pixelSouth=1 AND pixelSW=0 THEN SetSWSubPixel()
---IF pixelEast=1 AND pixelSouth=1 AND pixelSE=0 THEN SetSESubPixel()
---IF pixelWest=1 AND pixelNorth=1 AND pixelNW=0 THEN SetNWSubPixel()
---IF pixelEast=1 AND pixelNorth=1 AND pixelNE=0 THEN SetNESubPixel()
-                        --
                         --
                         -- Perform character rounding on alpha-numeric characters
                         --a := a or
