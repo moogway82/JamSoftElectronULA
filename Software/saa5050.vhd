@@ -91,16 +91,18 @@ port (
     R           :   out std_logic;
     G           :   out std_logic;
     B           :   out std_logic;
-    Y           :   out std_logic;
+    Y           :   out std_logic
 
     -- SAA5050 character ROM loading
-    char_rom_we   : in std_logic := '0';
-    char_rom_addr : in std_logic_vector(11 downto 0) := (others => '0');
-    char_rom_data : in std_logic_vector(7 downto 0) := (others => '0')
+    --char_rom_we   : in std_logic := '0';
+    --char_rom_addr : in std_logic_vector(11 downto 0) := (others => '0');
+    --char_rom_data : in std_logic_vector(7 downto 0) := (others => '0')
     );
 end entity;
 
 architecture rtl of saa5050 is
+
+    attribute keep : string;
 
 -- Register inputs in the bus clock domain
 signal di_r         :   std_logic_vector(6 downto 0);
@@ -109,10 +111,11 @@ signal lose_r       :   std_logic;
 -- Data input registered in the pixel clock domain
 signal code         :   std_logic_vector(6 downto 0);
 signal line_addr    :   unsigned(3 downto 0);
-signal rom_address1 :   std_logic_vector(11 downto 0);
-signal rom_address2 :   std_logic_vector(11 downto 0);
+signal rom_address1 :   std_logic_vector(10 downto 0);
+--signal rom_address2 :   std_logic_vector(11 downto 0);
 signal rom_data1    :   std_logic_vector(7 downto 0);
-signal rom_data2    :   std_logic_vector(7 downto 0);
+signal char_data    :   std_logic_vector(5 downto 0);
+--signal rom_data2    :   std_logic_vector(7 downto 0);
 
 -- Delayed display enable derived from LOSE by delaying for one and two characters
 signal disp_enable  :   std_logic;
@@ -175,6 +178,20 @@ signal hold_active      : std_logic;
 signal double_high1 :   std_logic;
 -- Set in second row of double height
 signal double_high2 :   std_logic;
+-- Graphics Generator Circuit
+signal gfx_right : std_logic;
+attribute keep of gfx_right : signal is "true";
+
+signal gfx_left  : std_logic;
+attribute keep of gfx_left : signal is "true";
+
+signal gfx_right1  : std_logic;
+signal gfx_right2  : std_logic;
+signal gfx_right3  : std_logic;
+signal gfx_left1   : std_logic;
+signal gfx_left2   : std_logic;
+signal gfx_left3   : std_logic;
+signal gfx_middle  : std_logic;
 
 begin
 
@@ -473,43 +490,40 @@ begin
 
     hold_active <= '1' when gfx_hold = '1' and code_r(6 downto 5) = "00" else '0';
 
-    rom_address1 <= char_rom_addr when char_rom_we = '1' and not IncludeTTxtROM else
-                    (others => '0') when (double_high = '0' and double_high2 = '1') else
-                    gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
-                    gfx & code_r & std_logic_vector(line_addr);
+    rom_address1 <= (others => '0') when (double_high = '0' and double_high2 = '1') else
+                    -- gfx & last_gfx & std_logic_vector(line_addr) when hold_active = '1' else
+                    code_r & std_logic_vector(line_addr);
 
     -- reference row for character rounding
-    rom_address2 <= rom_address1 + 1 when ((double_high = '0' and CRS = '1') or (double_high = '1' and line_counter(0) = '1')) else
-                    rom_address1 - 1;
+    --rom_address2 <= rom_address1 + 1 when ((double_high = '0' and CRS = '1') or (double_high = '1' and line_counter(0) = '1')) else
+    --                rom_address1 - 1;
 
-    -- If IncludeTTxtROM is true then we include the "ROM" version that is
-    -- initialized with the mode 7 character set data
-    -- (this is generally used for Xilinx builds)
-    char_rom_block: if IncludeTTxtROM generate
-        char_rom : entity work.saa5050_rom_dual_port port map (
-            clock    => CLOCK,
-            addressA => rom_address1,
-            QA       => rom_data1,
-            addressB => rom_address2,
-            QB       => rom_data2
-            );
-    end generate;
+    char_rom : entity work.saa5050_rom_dual_port_min port map (
+        clock    => CLOCK,
+        addressA => rom_address1,
+        QA       => rom_data1
+        --addressB => rom_address2,
+        --QB       => rom_data2
+    );
 
+    -- Graphics Generator
+    -- Copied from https://circuitverse.org/users/5735/projects/teletext-saa5050-0745b8b8-a20f-4084-9b51-10a0ebe3c802
+    -- No idea what it does, but if it works then it would save a chunk of BRAM space...
+    gfx_right <= (gfx_right1 or gfx_right2 or gfx_right3);
+    gfx_left  <= (gfx_left1 or gfx_left2 or gfx_left3);
 
-    -- If IncludeTTxtROM is false then we include the "RAM" version that is
-    -- uninitialized, and needs loading during the core boostrap phase
-    -- (this is generally used for Altera builds)
-    char_ram_block: if not IncludeTTxtROM generate
-        char_ram : entity work.saa5050_rom_dual_port_uninitialized port map (
-            clock    => CLOCK,
-            wea      => char_rom_we,
-            addressA => rom_address1,
-            dina     => char_rom_data,
-            QA       => rom_data1,
-            addressB => rom_address2,
-            QB       => rom_data2
-            );
-    end generate;
+    gfx_right1  <= not (line_addr(3) or line_addr(2) or gfx_middle or not code_r(1));
+    gfx_right2  <= not (not line_addr(3) or gfx_middle or not code_r(6));
+    gfx_right3  <= not (not line_addr(2) or gfx_middle or not code_r(3));
+
+    gfx_left1   <= not (line_addr(2) or line_addr(3) or gfx_middle or not code_r(0));
+    gfx_left2   <= not (not line_addr(3) or gfx_middle or not code_r(4));
+    gfx_left3   <= not (not line_addr(2) or gfx_middle or not code_r(2));
+
+    gfx_middle  <= not (code_r(5) or code_r(6));
+
+    char_data <=    (gfx_left & gfx_left & gfx_left & gfx_right & gfx_right & gfx_right) when code_r(5) = '1' and gfx = '1' else
+                    rom_data1(5 downto 0);
 
     --------------------------------------------------------------------
     -- Shift register
@@ -520,7 +534,7 @@ begin
     -- - Change shift
     process(CLOCK,nRESET)
     variable a : std_logic_vector(5 downto 0);
-    variable b : std_logic_vector(5 downto 0);
+    --variable b : std_logic_vector(5 downto 0);
     begin
         if nRESET = '0' then
             shift_reg <= (others => '0');
@@ -530,16 +544,16 @@ begin
                     -- Character rounding
 
                     -- a is the current row of pixels
-                    a := rom_data1(5 downto 0);
+                    a := char_data;
 
                     -- b is the adjacent row of pixels
-                    b := rom_data2(5 downto 0);
+                    --b := rom_data2(5 downto 0);
 
                     -- If bit 7 of the ROM data is set then this is a graphics
                     -- character and separated/hold graphics modes apply.
                     -- We don't just assume this to be the case if gfx=1 because
                     -- these modes don't apply to caps even in graphics mode
-                    if rom_data1(7) = '1' then
+                    if code_r(5) = '1' and gfx = '1' then
                         -- Apply a mask for separated graphics mode
                         if (hold_active = '0' and gfx_sep = '1') or (hold_active = '1' and last_gfx_sep = '1') then
                             a(5) := '0';
@@ -548,16 +562,10 @@ begin
                                 a := (others => '0');
                             end if;
                         end if;
-                    else
+                    -- else
                         -- TODO: Bring rounding back - I've just commented this bit out for now
                         -- until I understand how to go from 12MHz to 6MHz pixel clock but do 
                         -- rounding...
-                        -- 
---IF pixelWest=1 AND pixelSouth=1 AND pixelSW=0 THEN SetSWSubPixel()
---IF pixelEast=1 AND pixelSouth=1 AND pixelSE=0 THEN SetSESubPixel()
---IF pixelWest=1 AND pixelNorth=1 AND pixelNW=0 THEN SetNWSubPixel()
---IF pixelEast=1 AND pixelNorth=1 AND pixelNE=0 THEN SetNESubPixel()
-                        --
                         --
                         -- Perform character rounding on alpha-numeric characters
                         --a := a or

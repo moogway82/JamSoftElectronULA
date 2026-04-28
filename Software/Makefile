@@ -9,10 +9,8 @@ GHDL: $(SOURCES)
 	$(OSSCADBINPATH)/ghdl -e TM4164EA3_64k_W4
 	$(OSSCADBINPATH)/ghdl -a turbo_ram.vhd
 	$(OSSCADBINPATH)/ghdl -e turbo_ram
-	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050_rom_dual_port.vhd
-	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050_rom_dual_port 
-	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050_rom_dual_port_uninitialized.vhd
-	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050_rom_dual_port_uninitialized 
+	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050_rom_dual_port_min.vhd
+	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050_rom_dual_port_min 
 	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit saa5050.vhd
 	$(OSSCADBINPATH)/ghdl -e -fsynopsys -fexplicit saa5050 
 	$(OSSCADBINPATH)/ghdl -a -fsynopsys -fexplicit JamSoftElectronULA.vhd

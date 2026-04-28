@@ -20,7 +20,7 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA is
     generic (
         IncludeMode7  : boolean := true;
-        IncludeTurbo  : boolean := false
+        IncludeTurbo  : boolean := true
     );
     port (
         clk_16M00 : in  std_logic;
@@ -146,11 +146,11 @@ architecture behavioral of JamSoftElectronULA is
   signal screen_data    : std_logic_vector(7 downto 0);
 
   -- DEBUGGING screen address variables
-   signal pixel_debug : std_logic_vector(3 downto 0);
+  -- signal pixel_debug : std_logic_vector(3 downto 0);
   -- start address of current row block (8-10 lines)
-   signal row_addr_debug  : std_logic_vector(14 downto 6);
+  -- signal row_addr_debug  : std_logic_vector(14 downto 6);
   -- address within current line
-   signal byte_addr_debug : std_logic_vector(14 downto 3);
+  --  signal byte_addr_debug : std_logic_vector(14 downto 3);
 
   -- Screen Mode Registers
 
@@ -256,9 +256,6 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_b_int : std_logic;
   signal jafa_reg_addr : std_logic_vector(7 downto 0);
   signal jafa_screen_base : std_logic_vector(13 downto 0);
-  signal char_rom_we : std_logic;
-  signal char_rom_addr : std_logic_vector(11 downto 0);
-  signal char_rom_data : std_logic_vector(7 downto 0);
   signal jafa_do : std_logic_vector(7 downto 0);
   signal jafa_enable : std_logic;
   signal ttxt_cursor : std_logic;
@@ -270,6 +267,8 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_cursor_end : std_logic_vector(4 downto 0);
   signal ttxt_cursor_blink : std_logic_vector(5 downto 0);
   signal jafa_mode7_enable : std_logic;
+
+  -- signal dbg_ttxt_clk_count : std_logic_vector(3 downto 0);
 
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
@@ -307,7 +306,25 @@ begin
 
     not_cpu_clk <= not cpu_clk;
 
-    TurboIncluded: if IncludeTurbo generate 
+    -- Using some of the BRAM for SAA5050 Character ROM
+    TurboIncluded_M7: if IncludeTurbo and IncludeMode7 generate 
+      -- Turbo RAM using 8K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      generic map (
+        ram_size => 6144
+      )
+      port map(
+          addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
+
+    -- All of the BRAM can be used for TURBO
+    TurboIncluded_nM7: if IncludeTurbo and not IncludeMode7 generate 
       -- Turbo RAM using 8K Block RAM on FPGA
       ula : entity work.turbo_ram 
       port map(
@@ -459,7 +476,8 @@ begin
     begin
 
         if rising_edge(clk_16M00) then
-
+            -- TODO: Should we move this to *not* be async and not clocked with 16M? Everyother reg is async and I
+            -- wonder that that results in things getting out of step a little?
             if (RST_IN_n = '0') then
 
                isr             <= (others => '0');
@@ -1204,12 +1222,12 @@ begin
           end if;
         end if;
 
-      --DEBUG:
-       pixel_debug <= pixel;
-      -- start address of current row block (8-10 lines)
-       row_addr_debug <= row_addr;
-      -- address within current line
-       byte_addr_debug <= byte_addr;
+        --DEBUG:
+        -- pixel_debug <= pixel;
+        -- start address of current row block (8-10 lines)
+        -- row_addr_debug <= row_addr;
+        -- address within current line
+        -- byte_addr_debug <= byte_addr;
 
     end process;
 
@@ -1239,9 +1257,22 @@ begin
                   '0';
 
     -- Use Block RAM to serve CPU
+    TurboRAMAccess_M7: if IncludeTurbo and IncludeMode7 generate 
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
+                        '1' when addr(15 downto 11) = "00010" and turbo = '1' else 
+                        '0';
+    end generate;
+
+    TurboRAMAccess_nM7: if IncludeTurbo and not IncludeMode7 generate 
     turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
                         '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
                         '0';
+    end generate;
+
+    NotTurboRAMAccess: if not IncludeTurbo generate
+    turbo_ram_access <= '0';
+    end generate;
+
 
     clk_gen1 : process(clk_16M00, POR_n)
     begin
@@ -1651,11 +1682,7 @@ begin
           -- outputs
           R        => ttxt_r_int,
           G        => ttxt_g_int,
-          B        => ttxt_b_int,
-          -- SAA5050 character ROM loading - not needed...
-          char_rom_we   => char_rom_we,
-          char_rom_addr => char_rom_addr,
-          char_rom_data => char_rom_data
+          B        => ttxt_b_int
         );
 
       ttxt_di <= screen_data(6 downto 0);
