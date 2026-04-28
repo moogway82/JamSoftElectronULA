@@ -114,6 +114,7 @@ signal line_addr    :   unsigned(3 downto 0);
 signal rom_address1 :   std_logic_vector(10 downto 0);
 --signal rom_address2 :   std_logic_vector(11 downto 0);
 signal rom_data1    :   std_logic_vector(7 downto 0);
+signal char_data    :   std_logic_vector(5 downto 0);
 --signal rom_data2    :   std_logic_vector(7 downto 0);
 
 -- Delayed display enable derived from LOSE by delaying for one and two characters
@@ -551,6 +552,9 @@ begin
     --        );
     --end generate;
 
+    char_data <=    (gfx_left & gfx_left & gfx_left & gfx_right & gfx_right & gfx_right) when code_r(5) = '1' and gfx = '1' else
+                    rom_data1(5 downto 0);
+
     --------------------------------------------------------------------
     -- Shift register
     --------------------------------------------------------------------
@@ -570,7 +574,7 @@ begin
                     -- Character rounding
 
                     -- a is the current row of pixels
-                    a := rom_data1(5 downto 0);
+                    a := char_data;
 
                     -- b is the adjacent row of pixels
                     --b := rom_data2(5 downto 0);
@@ -581,7 +585,8 @@ begin
                     -- these modes don't apply to caps even in graphics mode
                     -- CJ TODO: We should know it's a gfx character by the address
                     -- and not need to look that up...
-                    if rom_data1(7) = '1' then
+                    if code(5) = '1' and gfx = '1' then
+                    --if rom_data1(7) = '1' then
                         -- Apply a mask for separated graphics mode
                         if (hold_active = '0' and gfx_sep = '1') or (hold_active = '1' and last_gfx_sep = '1') then
                             a(5) := '0';
@@ -590,7 +595,7 @@ begin
                                 a := (others => '0');
                             end if;
                         end if;
-                    else
+                    -- else
                         -- TODO: Bring rounding back - I've just commented this bit out for now
                         -- until I understand how to go from 12MHz to 6MHz pixel clock but do 
                         -- rounding...
