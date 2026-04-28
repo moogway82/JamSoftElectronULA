@@ -262,7 +262,6 @@ architecture behavioral of JamSoftElectronULA is
   signal ttxt_cursor_delay1 : std_logic;
   signal ttxt_cursor_delay2 : std_logic;
   signal ttxt_cursor_delay3 : std_logic;
-  signal ttxt_cursor_delay4 : std_logic;
   signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
   signal ttxt_cursor_start : std_logic_vector(6 downto 0);
   signal ttxt_cursor_end : std_logic_vector(4 downto 0);
@@ -912,6 +911,7 @@ begin
           ttxt_cursor <= '0';
           ttxt_cursor_delay1 <= '0';
           ttxt_cursor_delay2 <= '0';
+          ttxt_cursor_delay3 <= '0';
 
           ttxt_cursor_blink <= (others => '0');
 
@@ -1017,6 +1017,9 @@ begin
             -- Delay the Mode 7 cursor by 2 characters
                   ttxt_cursor_delay1 <= ttxt_cursor;
                   ttxt_cursor_delay2 <= ttxt_cursor_delay1;
+          end if;
+          if h_count(3 downto 0) = "0010" then
+            ttxt_cursor_delay3 <= ttxt_cursor_delay2;
           end if;
 
           -- Handle wrap-around back to mode_base
@@ -1228,11 +1231,11 @@ begin
 
     end process;
 
-    red   <=  ttxt_r_int xor ttxt_cursor_delay4 when mode_ttxt = '1' else
+    red   <=  ttxt_r_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
               red_int;
-    green <=  ttxt_g_int xor ttxt_cursor_delay4 when mode_ttxt = '1' else
+    green <=  ttxt_g_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
               green_int;
-    blue  <=  ttxt_b_int xor ttxt_cursor_delay4 when mode_ttxt = '1' else
+    blue  <=  ttxt_b_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
               blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     HS_n  <= hsync_int;
@@ -1625,8 +1628,6 @@ begin
         if RST_IN_n = '0' then
             ttxt_clk_count := (others => '0');
             ttxt_clken <= '0';
-            ttxt_cursor_delay3 <= '0';
-            ttxt_cursor_delay4 <= '0';
         elsif rising_edge(clk_16M00) then
           ttxt_clken <= not ttxt_clken;
 
@@ -1645,13 +1646,6 @@ begin
               ttxt_clken <= '0';
           end if;
 
-          -- time the cusor
-          if (ttxt_clk_count = 4) then
-            ttxt_cursor_delay3 <= ttxt_cursor_delay2;
-            ttxt_cursor_delay4 <= ttxt_cursor_delay3;
-          end if;
-
-          -- dbg_ttxt_clk_count <= std_logic_vector(ttxt_clk_count);
         end if;
       end process p_gen_ttxt_clken;
 
