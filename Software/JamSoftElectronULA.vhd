@@ -148,9 +148,9 @@ architecture behavioral of JamSoftElectronULA is
   -- DEBUGGING screen address variables
   -- signal pixel_debug : std_logic_vector(3 downto 0);
   -- start address of current row block (8-10 lines)
-  -- signal row_addr_debug  : std_logic_vector(14 downto 6);
+   signal row_addr_debug  : std_logic_vector(14 downto 6);
   -- address within current line
-  --  signal byte_addr_debug : std_logic_vector(14 downto 3);
+    signal byte_addr_debug : std_logic_vector(14 downto 3);
 
   -- Screen Mode Registers
 
@@ -996,22 +996,47 @@ begin
 
           -- At the start of hsync,  update the row_addr from byte_addr which
           -- gets to the start of the next block
-          if hsync_int = '0' and last_line = '1' then
+          -- TODO: SO I think ROW_ADDR should update at the end of the active last line
+          if h_count = std_logic_vector(to_unsigned(630, 11)) and last_line = '1' then
               row_addr := byte_addr(14 downto 6);
           end if;
 
           -- During hsync, reset byte reset back to start of line, unless
           -- it's the last line
-          if hsync_int = '0' and last_line = '0' then
-              byte_addr := row_addr & "000";
-          end if;
+
+          --end if;
 
           -- Every 8 or 16 pixels depending on mode/repeats
-          if h_count < h_active then
-              if (mode_40 = '0' and h_count(2 downto 0) = "000") or (mode_40 = '1' and h_count(3 downto 0) = "1000") then
-                  byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
-              end if;
-          end if;
+          -- if h_count < h_active then
+            if mode_40 = '0' then
+                if h_count(2 downto 0) = "000" then
+                    if h_count(10 downto 3) = "01111111" then
+                        byte_addr := row_addr & "000";
+                    else
+                        byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+                    end if;
+                end if;
+            else
+                if h_count(3 downto 0) = "1000" then
+                    if h_count(10 downto 4) = "0111111" then
+                        byte_addr := row_addr & "000";
+                    else
+                        byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+                    end if;
+                end if;
+            end if;
+
+
+          --      if h_count = "01111111000"   then
+          --          byte_addr := row_addr & "000";
+          --      elsif h_count(2 downto 0) = "000" then
+
+          --  if h_count = "01111111000"   then
+          --    byte_addr := row_addr & "000";
+          --  elsif (mode_40 = '0' and h_count(2 downto 0) = "000") or (mode_40 = '1' and h_count(3 downto 0) = "1000") then
+          --      byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+          --  end if;
+          ---- end if;
 
           if h_count(3 downto 0) = "1000" then
             -- Delay the Mode 7 cursor by 2 characters
@@ -1225,9 +1250,9 @@ begin
         --DEBUG:
         -- pixel_debug <= pixel;
         -- start address of current row block (8-10 lines)
-        -- row_addr_debug <= row_addr;
+         row_addr_debug <= row_addr;
         -- address within current line
-        -- byte_addr_debug <= byte_addr;
+         byte_addr_debug <= byte_addr;
 
     end process;
 
