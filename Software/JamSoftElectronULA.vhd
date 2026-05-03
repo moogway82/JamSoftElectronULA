@@ -994,23 +994,18 @@ begin
               end if;
           end if;
 
-          -- At the start of hsync,  update the row_addr from byte_addr which
-          -- gets to the start of the next block
-          -- TODO: SO I think ROW_ADDR should update at the end of the active last line
+          -- One the last line of the row, at the end of of h_active scanline, update the row_addr from byte_addr which
+          -- is the start of the next row
           if h_count = h_active and last_line = '1' then
               row_addr := byte_addr(14 downto 6);
           end if;
 
-          -- During hsync, reset byte reset back to start of line, unless
-          -- it's the last line
-
-          --end if;
-
-          -- Every 8 or 16 pixels depending on mode/repeats
-          -- if h_count < h_active then
+          -- Byte_address keeps ticking after visible region of scanline but is reset back to start of line just before 
+          -- it's needed for the next active region (at h_count 1016 out of 1023)
+          -- Increment the byte address every 8 or 16 pixels depending on mode/repeats
             if mode_40 = '0' then
                 if h_count(2 downto 0) = "000" then
-                    if h_count(10 downto 3) = "01111111" then
+                    if h_count(10 downto 3) = "01111111" then -- At the 
                         byte_addr := row_addr & "000";
                     else
                         byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
@@ -1025,18 +1020,6 @@ begin
                     end if;
                 end if;
             end if;
-
-
-          --      if h_count = "01111111000"   then
-          --          byte_addr := row_addr & "000";
-          --      elsif h_count(2 downto 0) = "000" then
-
-          --  if h_count = "01111111000"   then
-          --    byte_addr := row_addr & "000";
-          --  elsif (mode_40 = '0' and h_count(2 downto 0) = "000") or (mode_40 = '1' and h_count(3 downto 0) = "1000") then
-          --      byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
-          --  end if;
-          ---- end if;
 
           if h_count(3 downto 0) = "1000" then
             -- Delay the Mode 7 cursor by 2 characters
