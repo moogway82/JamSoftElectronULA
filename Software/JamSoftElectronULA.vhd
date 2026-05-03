@@ -997,7 +997,7 @@ begin
           -- At the start of hsync,  update the row_addr from byte_addr which
           -- gets to the start of the next block
           -- TODO: SO I think ROW_ADDR should update at the end of the active last line
-          if h_count = std_logic_vector(to_unsigned(630, 11)) and last_line = '1' then
+          if h_count = h_active and last_line = '1' then
               row_addr := byte_addr(14 downto 6);
           end if;
 
