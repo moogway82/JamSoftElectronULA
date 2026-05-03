@@ -308,7 +308,7 @@ begin
 
     -- Using some of the BRAM for SAA5050 Character ROM
     TurboIncluded_M7: if IncludeTurbo and IncludeMode7 generate 
-      -- Turbo RAM using 8K Block RAM on FPGA
+      -- Turbo RAM using 6K Block RAM on FPGA
       ula : entity work.turbo_ram 
       generic map (
         ram_size => 6144
