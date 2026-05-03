@@ -61,9 +61,6 @@ use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
 entity saa5050 is
-generic (
-    IncludeTTxtROM : boolean -- false if the SAA5050 character ROM needs loading
-    );
 port (
     CLOCK       :   in  std_logic;
     -- 6 MHz dot clock enable
@@ -508,7 +505,6 @@ begin
 
     -- Graphics Generator
     -- Copied from https://circuitverse.org/users/5735/projects/teletext-saa5050-0745b8b8-a20f-4084-9b51-10a0ebe3c802
-    -- No idea what it does, but if it works then it would save a chunk of BRAM space...
     gfx_right <= (gfx_right1 or gfx_right2 or gfx_right3);
     gfx_left  <= (gfx_left1 or gfx_left2 or gfx_left3);
 

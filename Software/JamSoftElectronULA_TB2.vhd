@@ -40,6 +40,9 @@ architecture behavioral of JamSoftElectronULA_TB2 is
 begin
 
   ula : entity work.JamSoftElectronULA 
+  generic map(
+    IncludeTurbo => false
+  )
   port map(
     clk_16M00 => clk_16M00,
     addr => addr,

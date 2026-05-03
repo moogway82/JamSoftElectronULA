@@ -1664,9 +1664,6 @@ begin
                   (others => '0');
 
       teletext : entity work.saa5050
-        generic map (
-          IncludeTTxtROM => true
-        )
         port map (
           -- inputs
           CLOCK    => clk_16M00, --16Mhz
