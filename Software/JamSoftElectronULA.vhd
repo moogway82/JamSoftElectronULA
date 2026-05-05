@@ -678,10 +678,10 @@ begin
                     end if;
 
                     -- Jafa Mode 7 compatibility
-                    if (addr = x"FC1C" and R_W_n = '0') then 
+                    if (addr = x"FC1C" and R_W_n = '0') and IncludeMode7 then 
                       jafa_reg_addr <= data_in;
                     end if;
-                    if (addr = x"FC1D" and R_W_n = '0') then
+                    if (addr = x"FC1D" and R_W_n = '0') and IncludeMode7 then
                       case jafa_reg_addr is
 
                         when x"0A" =>
