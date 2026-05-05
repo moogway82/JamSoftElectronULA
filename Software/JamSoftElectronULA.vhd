@@ -110,7 +110,7 @@ architecture behavioral of JamSoftElectronULA is
   -- ULA Registers
   signal isr            : std_logic_vector(6 downto 2);
   signal ier            : std_logic_vector(6 downto 2);
-  signal screen_base    : std_logic_vector(14 downto 3);
+  signal screen_base    : std_logic_vector(14 downto 0);
   signal ula_screen_base    : std_logic_vector(14 downto 3);
   signal data_shift     : std_logic_vector(7 downto 0);
   signal page_enable    : std_logic;
@@ -148,9 +148,9 @@ architecture behavioral of JamSoftElectronULA is
   -- DEBUGGING screen address variables
   -- signal pixel_debug : std_logic_vector(3 downto 0);
   -- start address of current row block (8-10 lines)
-   signal row_addr_debug  : std_logic_vector(14 downto 6);
+  -- signal row_addr_debug  : std_logic_vector(14 downto 6);
   -- address within current line
-    signal byte_addr_debug : std_logic_vector(14 downto 3);
+  -- signal byte_addr_debug : std_logic_vector(14 downto 3);
 
   -- Screen Mode Registers
 
@@ -699,7 +699,7 @@ begin
                           end if;
 
                         when x"0D" =>
-                          jafa_screen_base(7 downto 3) <= data_in(7 downto 3);
+                          jafa_screen_base(7 downto 0) <= data_in(7 downto 0);
 
                         when x"0E" => -- R14 Cursor H
                           ttxt_cursor_pos(13 downto 8) <= data_in(5 downto 0);
@@ -782,8 +782,8 @@ begin
         end if;
     end process; -- rtcint_cassette_regs
 
-    screen_base <=  "0" & jafa_screen_base(13 downto 3) when jafa_mode7_enable = '1' and IncludeMode7 = true else
-                    ula_screen_base;
+    screen_base <=  "0" & jafa_screen_base(13 downto 0) when jafa_mode7_enable = '1' and IncludeMode7 = true else
+                    ula_screen_base & "000";
 
 
     -- Mode Selection
@@ -990,7 +990,7 @@ begin
                 row_addr  := screen_base(11 downto 3);
                 -- TODO: This might cause errors in Mode 7 as will not be able to offset the screen start
                 -- in blocks smaller than 8 characters.
-                byte_addr := screen_base(11 downto 3) & "000";
+                byte_addr := screen_base(11 downto 0);
               end if;
           end if;
 
@@ -1233,9 +1233,9 @@ begin
         --DEBUG:
         -- pixel_debug <= pixel;
         -- start address of current row block (8-10 lines)
-         row_addr_debug <= row_addr;
+        -- row_addr_debug <= row_addr;
         -- address within current line
-         byte_addr_debug <= byte_addr;
+        -- byte_addr_debug <= byte_addr;
 
     end process;
 
