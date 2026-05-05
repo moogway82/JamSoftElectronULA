@@ -1266,8 +1266,8 @@ begin
 
     -- Use Block RAM to serve CPU
     TurboRAMAccess_M7: if IncludeTurbo and IncludeMode7 generate 
-    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
-                        '1' when addr(15 downto 11) = "00010" and turbo = '1' else 
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else      -- 4096 x8 Blocks
+                        '1' when addr(15 downto 11) = "00010" and turbo = '1' else   -- 2024 x4 Blocks
                         '0';
     end generate;
 
