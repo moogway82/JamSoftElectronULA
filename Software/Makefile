@@ -23,7 +23,7 @@ JamSoftElectronULA.bin: GHDL
 
 JamSoftElectronULA_config_medium.bin: JamSoftElectronULA.bin
 	head -c9 JamSoftElectronULA.bin > JamSoftElectronULA_config_medium.bin
-	printf "%b" "\01" >> JamSoftElectronULA_config_medium.bin 
+	printf "%b" "\02" >> JamSoftElectronULA_config_medium.bin 
 	tail -c32210 JamSoftElectronULA.bin >> JamSoftElectronULA_config_medium.bin 
 
 JamSoftElectronULA_64k.bin: JamSoftElectronULA.bin
@@ -42,7 +42,7 @@ clean:
 	rm -f JamSoftElectronULA.bin JamSoftElectronULA_64k.bin JamSoftElectronULA_config_medium.bin JamSoftElectronULA.json JamSoftElectronULA.asc JamSoftElectronULA.o JamSoftElectronULA_TB2.o e~jamsoftelectronula.o e~jamsoftelectronula_tb2.o e~tm4164ea3_64k_w4.o tm4164ea4_64k_w4.o e~turbo_ram.o turbo_ram.o work-obj93.cf tm4164ea3_64k_w4 turbo_ram jamsoftelectronula jamsoftelectronula_tb2
 
 prog: 
-	$(OSSCADBINPATH)/iceprog JamSoftElectronULA.bin
+	$(OSSCADBINPATH)/iceprog JamSoftElectronULA_config_medium.bin
 
 progpi:
 	pinctrl set 17 op
