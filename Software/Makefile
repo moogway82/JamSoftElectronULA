@@ -26,8 +26,8 @@ JamSoftElectronULA_config_high.bin: JamSoftElectronULA.bin
 	printf "%b" "\02" >> JamSoftElectronULA_config_high.bin 
 	tail -c32210 JamSoftElectronULA.bin >> JamSoftElectronULA_config_high.bin 
 
-JamSoftElectronULA_64k.bin: JamSoftElectronULA.bin
-	cp JamSoftElectronULA.bin JamSoftElectronULA_64k.bin
+JamSoftElectronULA_64k.bin: JamSoftElectronULA_config_high.bin
+	cp JamSoftElectronULA_config_high.bin JamSoftElectronULA_64k.bin
 	dd if=/dev/zero ibs=1 count=33316 | LC_ALL=C tr "\000" "\377" >> JamSoftElectronULA_64k.bin
 
 test: GHDL
