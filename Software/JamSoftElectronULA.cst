@@ -1,0 +1,76 @@
+//File Title: Physical Constraints file
+//Part Number: GW1NR-LV9LQ144PC6/I5
+
+// Clock;
+IO_LOC "clk_16M00" 63;
+
+// Reset;
+IO_LOC  "RST_IN_n"      95;
+IO_LOC "RST_OUT_n"   96;
+
+// ULA Signals;
+IO_LOC  "addr[0]"      3;
+IO_LOC  "addr[1]"      101;
+IO_LOC  "addr[2]"      7;
+IO_LOC  "addr[3]"      30;
+IO_LOC  "addr[4]"      28;
+IO_LOC  "addr[5]"      27;
+IO_LOC  "addr[6]"      26;
+IO_LOC  "addr[7]"      10;
+IO_LOC  "addr[8]"      102;
+IO_LOC  "addr[9]"      34;
+IO_LOC  "addr[10]"      133;
+IO_LOC  "addr[11]"      29;
+IO_LOC  "addr[12]"      8;
+IO_LOC  "addr[13]"      119;
+IO_LOC  "addr[14]"      4;
+IO_LOC  "addr[15]"      72;
+
+IO_LOC  "data[0]"      143;
+IO_LOC  "data[1]"      54;
+IO_LOC  "data[2]"      56;
+IO_LOC  "data[3]"      57;
+IO_LOC  "data[4]"      59;
+IO_LOC  "data[5]"      60;
+IO_LOC  "data[6]"      62;
+IO_LOC  "data[7]"      64;
+IO_LOC  "data_en_n"   144;
+
+IO_LOC "R_W_n"   69;
+IO_LOC "IRQ_n"   97;
+IO_LOC "dram_data[0]" 137;
+IO_LOC "dram_data[1]" 40;
+IO_LOC "dram_data[2]"  51;
+IO_LOC "dram_data[3]" 52;
+IO_LOC "dram_addr[0]" 93;
+IO_LOC "dram_addr[1]" 141;
+IO_LOC "dram_addr[2]" 21;
+IO_LOC "dram_addr[3]" 12;
+IO_LOC "dram_addr[4]" 20;
+IO_LOC "dram_addr[5]" 119;
+IO_LOC "dram_addr[6]" 18;
+IO_LOC "dram_addr[7]" 16;
+IO_LOC "ras_n"   79;
+IO_LOC "cas_n"   80;
+IO_LOC "ram_we"   94;
+IO_LOC  "ram_nRW"   25;
+IO_LOC "ROM_n"   82;
+
+IO_LOC "red"    13;
+IO_LOC "green"    15;
+IO_LOC "blue"    139;
+IO_LOC "csync"    87;
+IO_LOC  "HS_n"    90;
+IO_LOC  "sound"    83;
+IO_LOC  "kbd[0]"    136;
+IO_LOC  "kbd[1]"   65;
+IO_LOC  "kbd[2]"   66;
+IO_LOC  "kbd[3]"   68;
+IO_LOC "casIn"   143;
+IO_LOC "casOut"   78;
+IO_LOC "caps"   85;
+IO_LOC "motor"   86;
+IO_LOC "cpu_clk_out"  81;
+
+IO_LOC "testing_pin"  100;
+

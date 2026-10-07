@@ -21,6 +21,15 @@ JamSoftElectronULA.bin: GHDL
 	$(OSSCADBINPATH)/nextpnr-ice40 --freq 16 --hx1k --package vq100 --asc JamSoftElectronULA.asc --json JamSoftElectronULA.json --pcf JamSoftElectronULA.pcf
 	$(OSSCADBINPATH)/icepack JamSoftElectronULA.asc JamSoftElectronULA.bin
 
+JamSoftElectronULA_gowin.bin: GHDL
+	$(OSSCADBINPATH)/yosys -m ghdl -p 'ghdl -fsynopsys -fexplicit JamSoftElectronULA; synth_gowin -json JamSoftElectronULA_gowin.json'
+	$(OSSCADBINPATH)/nextpnr-himbaechel --json JamSoftElectronULA_gowin.json --write JamSoftElectronULA_gowin_pnr.json --device GW1NR-LV9LQ144PC6/I5 --vopt family=GW1N-9 --vopt cst=JamSoftElectronULA.cst
+	$(OSSCADBINPATH)/gowin_pack -d GW1N-1 -o JamSoftElectronULA_gowin.fs JamSoftElectronULA_gowin_pnr.json
+
+
+	$(OSSCADBINPATH)/nextpnr-ice40 --freq 16 --hx1k --package vq100 --asc JamSoftElectronULA.asc --json JamSoftElectronULA.json --pcf JamSoftElectronULA.pcf
+	$(OSSCADBINPATH)/icepack JamSoftElectronULA.asc JamSoftElectronULA.bin	
+
 JamSoftElectronULA_config_high.bin: JamSoftElectronULA.bin
 	head -c9 JamSoftElectronULA.bin > JamSoftElectronULA_config_high.bin
 	printf "%b" "\02" >> JamSoftElectronULA_config_high.bin 
