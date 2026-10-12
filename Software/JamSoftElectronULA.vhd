@@ -18,6 +18,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
+    generic (
+        IncludeMode7  : boolean := false;
+        IncludeTurbo  : boolean := true
+    );
     port (
         clk_16M00 : in  std_logic;
 
@@ -106,7 +110,8 @@ architecture behavioral of JamSoftElectronULA is
   -- ULA Registers
   signal isr            : std_logic_vector(6 downto 2);
   signal ier            : std_logic_vector(6 downto 2);
-  signal screen_base    : std_logic_vector(14 downto 6);
+  signal screen_base    : std_logic_vector(14 downto 0);
+  signal ula_screen_base    : std_logic_vector(14 downto 3);
   signal data_shift     : std_logic_vector(7 downto 0);
   signal page_enable    : std_logic;
   signal page           : std_logic_vector(2 downto 0);
@@ -149,6 +154,7 @@ architecture behavioral of JamSoftElectronULA is
 
   -- Screen Mode Registers
 
+  signal mode_no        : std_logic_vector(2 downto 0);
   -- bits 6..3 the of the 256 byte page that the mode starts at
   signal mode_base      : std_logic_vector(6 downto 3);
 
@@ -160,6 +166,9 @@ architecture behavioral of JamSoftElectronULA is
 
   -- a '1' indicates a 40-col mode (modes 4, 5 and 6)
   signal mode_40        : std_logic;
+
+  -- a '1' indicates that it's mode 7 and using the SAA5050 as character generator
+  signal mode_ttxt      : std_logic;
 
   signal last_line      : std_logic;
 
@@ -235,6 +244,32 @@ architecture behavioral of JamSoftElectronULA is
   signal DRAMC_PS, DRAMC_NS : dramc_fsm_type;
   --signal DRAMC_PS_DEBUG, DRAMC_NS_DEBUG : std_logic_vector(3 downto 0);
 
+  signal ttxt_clock : std_logic;
+  signal ttxt_clken : std_logic;
+  signal ttxt_di : std_logic_vector(6 downto 0);
+  signal ttxt_glr : std_logic;
+  signal ttxt_dew : std_logic;
+  signal ttxt_crs : std_logic;
+  signal ttxt_lose : std_logic;
+  signal ttxt_r_int : std_logic;
+  signal ttxt_g_int : std_logic;
+  signal ttxt_b_int : std_logic;
+  signal jafa_reg_addr : std_logic_vector(7 downto 0);
+  signal jafa_screen_base : std_logic_vector(13 downto 0);
+  signal jafa_do : std_logic_vector(7 downto 0);
+  signal jafa_enable : std_logic;
+  signal ttxt_cursor : std_logic;
+  signal ttxt_cursor_delay1 : std_logic;
+  signal ttxt_cursor_delay2 : std_logic;
+  signal ttxt_cursor_delay3 : std_logic;
+  signal ttxt_cursor_pos : std_logic_vector(13 downto 0);
+  signal ttxt_cursor_start : std_logic_vector(6 downto 0);
+  signal ttxt_cursor_end : std_logic_vector(4 downto 0);
+  signal ttxt_cursor_blink : std_logic_vector(5 downto 0);
+  signal jafa_mode7_enable : std_logic;
+
+  -- signal dbg_ttxt_clk_count : std_logic_vector(3 downto 0);
+
 -- Helper function to cast an std_logic value to an integer
 function sl2int (x: std_logic) return integer is
 begin
@@ -271,16 +306,36 @@ begin
 
     not_cpu_clk <= not cpu_clk;
 
-    -- Turbo RAM using 8K Block RAM on FPGA
-    ula : entity work.turbo_ram 
-    port map(
-        addr => addr(12 downto 0),
-        write_en => turbo_we,
-        wclk => not_cpu_clk,
-        rclk => cpu_clk,
-        din => data_in,
-        dout => block_ram_data
-    );
+    -- Using some of the BRAM for SAA5050 Character ROM
+    TurboIncluded_M7: if IncludeTurbo and IncludeMode7 generate 
+      -- Turbo RAM using 6K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      generic map (
+        ram_size => 6144
+      )
+      port map(
+          addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
+
+    -- All of the BRAM can be used for TURBO
+    TurboIncluded_nM7: if IncludeTurbo and not IncludeMode7 generate 
+      -- Turbo RAM using 8K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      port map(
+          addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
 
     -- TESTING PIN - This will change depending on what I need to check
     testing_pin <= '0';
@@ -347,13 +402,18 @@ begin
                 "0000" & (kbd xor "1111") when kbd_access = '1' else
                 isr_data                  when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"0" else
                 data_shift                when addr(15 downto 8) = x"FE" and addr(3 downto 0) = x"4" else
+                jafa_do                   when jafa_enable = '1' and IncludeMode7 = true else
                 x"F1"; -- todo FIXEME
 
+    -- ** DONT FORGET TO UPDATE THIS IS DECODING ANY NEW ADDRESS RANGES OTHERWISE FPGA WILL NOT SEE DATA BUS **
+    -- ** HARD TO SPOT THE PROBLEM ON SIMULATION **
+    --
     -- Used to control the ULA's data bus buffer (ie, Level Shifting buffer so FPGA can handle 5V)
     -- ULA isn't the only thing on the Databus, ROM talks directly to CPU & Keyboard as might other edge connected devices
     data_en  <= '1'                       when addr(15) = '0' else
                 '1'                       when kbd_access = '1' else
                 '1'                       when addr(15 downto 8) = x"FE" else
+                '1'                       when jafa_enable = '1' and IncludeMode7 = true else
                 '0';
 
     -- The data buffer enable is active LOW
@@ -416,12 +476,14 @@ begin
     begin
 
         if rising_edge(clk_16M00) then
-
+            -- TODO: Should we move this to *not* be async and not clocked with 16M? Everyother reg is async and I
+            -- wonder that that results in things getting out of step a little?
             if (RST_IN_n = '0') then
 
                isr             <= (others => '0');
                ier             <= (others => '0');
-               screen_base     <= (others => '0');
+               ula_screen_base <= (others => '0');
+               jafa_screen_base  <= (others => '0');
                data_shift      <= (others => '0');
                page_enable     <= '0';
                page            <= (others => '0');
@@ -435,6 +497,12 @@ begin
                cintone         <= '0';
                ctrl_caps       <= '0';
                turbo           <= '0';
+               mode_no         <= "110";
+               jafa_reg_addr   <= (others => '0');
+               jafa_mode7_enable  <= '0';
+               ttxt_cursor_pos <= (others => '0');
+               ttxt_cursor_start <= (others => '0');
+               ttxt_cursor_end <= (others => '0');
 
             else
  
@@ -605,8 +673,42 @@ begin
                         end if;
                     end if;
                     -- Detect "2" being pressed: Turbo Speed
-                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') then
+                    if (addr = x"b7ff" and page_enable = '1' and page(2 downto 1) = "00" and ctrl_caps = '1' and kbd(0) = '0') and IncludeTurbo = true then
                         turbo <= '1';
+                    end if;
+
+                    -- Jafa Mode 7 compatibility
+                    if (addr = x"FC1C" and R_W_n = '0') and IncludeMode7 then 
+                      jafa_reg_addr <= data_in;
+                    end if;
+                    if (addr = x"FC1D" and R_W_n = '0') and IncludeMode7 then
+                      case jafa_reg_addr is
+
+                        when x"0A" =>
+                          ttxt_cursor_start <= data_in(6 downto 0);
+
+                        when x"0B" =>
+                          ttxt_cursor_end <= data_in(4 downto 0);
+
+                        when x"0C" =>
+                          jafa_screen_base(13 downto 8) <= data_in(5 downto 0);
+                          if data_in(5) = '1' then -- Writing screen_address(13) to '1' enables Mode 7
+                            jafa_mode7_enable <= '1';
+                          else 
+                            jafa_mode7_enable <= '0';
+                          end if;
+
+                        when x"0D" =>
+                          jafa_screen_base(7 downto 0) <= data_in(7 downto 0);
+
+                        when x"0E" => -- R14 Cursor H
+                          ttxt_cursor_pos(13 downto 8) <= data_in(5 downto 0);
+
+                        when x"0F" => -- R15 Cursor L
+                          ttxt_cursor_pos(7 downto 0) <= data_in(7 downto 0);
+
+                        when others =>
+                      end case;
                     end if;
 
                     if (addr(15 downto 8) = x"FE") then
@@ -621,9 +723,9 @@ begin
                                 ier(6 downto 2) <= data_in(6 downto 2);
                             when x"1" =>
                             when x"2" =>
-                                screen_base(8 downto 6) <= data_in(7 downto 5);
+                                ula_screen_base(8 downto 3) <= data_in(7 downto 2);
                             when x"3" =>
-                                screen_base(14 downto 9) <= data_in(5 downto 0);
+                                ula_screen_base(14 downto 9) <= data_in(5 downto 0);
                             when x"4" =>
                                 data_shift <= data_in;
                                 -- Clear the TDEmpty interrupt on writing the
@@ -658,50 +760,7 @@ begin
                             when x"7" =>
                                 caps_int     <= data_in(7);
                                 motor_int    <= data_in(6);
-                                case (data_in(5 downto 3)) is
-                                when "000" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                when "001" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "01";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                when "010" =>
-                                    mode_base    <= "0110"; -- 0x3000
-                                    mode_bpp     <= "10";
-                                    mode_40      <= '0';
-                                    mode_text    <= '0';
-                                when "011" =>
-                                    mode_base    <= "1000"; -- 0x4000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '0';
-                                    mode_text    <= '1';
-                                when "100" =>
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                when "101" =>
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "01";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                when "110" =>
-                                    mode_base    <= "1100"; -- 0x6000
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '1';
-                                when "111" =>
-                                    -- mode 7 seems to default to mode 4
-                                    mode_base    <= "1011"; -- 0x5800
-                                    mode_bpp     <= "00";
-                                    mode_40      <= '1';
-                                    mode_text    <= '0';
-                                when others =>
-                                end case;
+                                mode_no      <= data_in(5 downto 3);
                                 comms_mode   <= data_in(2 downto 1);
                                 -- A quirk of the Electron ULA is that RxFull
                                 -- interrupt fires when tape output mode is
@@ -710,6 +769,7 @@ begin
                                 if data_in(2 downto 1) = "10" then
                                     isr(4) <= '1';
                                 end if;
+
                             when others =>
                                 -- A '1' in the palatte data means disable the colour
                                 -- Invert the stored palette, to make the palette logic simpler
@@ -721,6 +781,88 @@ begin
             end if;
         end if;
     end process; -- rtcint_cassette_regs
+
+    screen_base <=  "0" & jafa_screen_base(13 downto 0) when jafa_mode7_enable = '1' and IncludeMode7 = true else
+                    ula_screen_base & "000";
+
+
+    -- Mode Selection
+    mode_selection : process(RST_IN_n, clk_16M00)
+    begin
+      if RST_IN_n = '0' then
+        -- Not resetting any mode_ vars apart from ttxt as originals don't seem to have defaults
+        mode_ttxt <= '0';
+      elsif rising_edge(clk_16M00) then
+        if jafa_mode7_enable = '1' and IncludeMode7 = true then
+            mode_base    <= "0111"; -- Not used in Mode 7
+            mode_bpp     <= "00";   -- Not used in Mode 7
+            mode_40      <= '1';    -- Used a little in Mode 7   
+            mode_text    <= '1';    -- Used a lot in Mode 7
+            mode_ttxt    <= '1';    -- Switches to SAA5050 for rendering pixels
+        else
+          case mode_no is
+            when "000" =>
+                mode_base    <= "0110"; -- 0x3000
+                mode_bpp     <= "00";
+                mode_40      <= '0';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "001" =>
+                mode_base    <= "0110"; -- 0x3000
+                mode_bpp     <= "01";
+                mode_40      <= '0';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "010" =>
+                mode_base    <= "0110"; -- 0x3000
+                mode_bpp     <= "10";
+                mode_40      <= '0';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "011" =>
+                mode_base    <= "1000"; -- 0x4000
+                mode_bpp     <= "00";
+                mode_40      <= '0';
+                mode_text    <= '1';
+                mode_ttxt    <= '0';
+            when "100" =>
+                mode_base    <= "1011"; -- 0x5800
+                mode_bpp     <= "00";
+                mode_40      <= '1';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "101" =>
+                mode_base    <= "1011"; -- 0x5800
+                mode_bpp     <= "01";
+                mode_40      <= '1';
+                mode_text    <= '0';
+                mode_ttxt    <= '0';
+            when "110" =>
+                mode_base    <= "1100"; -- 0x6000
+                mode_bpp     <= "00";
+                mode_40      <= '1';
+                mode_text    <= '1';
+                mode_ttxt    <= '0';
+            when "111" =>
+                if IncludeMode7 = true then
+                    mode_base    <= "0111"; -- Not used in Mode 7
+                    mode_bpp     <= "00";   -- Not used in Mode 7
+                    mode_40      <= '1';    -- Used a little in Mode 7   
+                    mode_text    <= '1';    -- Used a lot in Mode 7
+                    mode_ttxt    <= '1';    -- Switches to SAA5050 for rendering pixels
+                else 
+                    -- mode 7 seems to default to mode 4
+                    mode_base    <= "1011"; -- 0x5800
+                    mode_bpp     <= "00";
+                    mode_40      <= '1';
+                    mode_text    <= '0';
+                    mode_ttxt    <= '0';
+                end if;
+            when others =>
+          end case;
+        end if;
+      end if;
+    end process mode_selection;
 
     caps  <= not caps_int;
     motor <= motor_int;
@@ -745,16 +887,16 @@ begin
     contention   <= '0' when  h_count >= h_active else
                     '0' when  (mode_text = '0' and v_count >= v_active_gph) else
                     '0' when  (mode_text = '1' and v_count >= v_active_txt) else
-                    '0' when  (unsigned(char_row) >= 8) else
+                    '0' when  (unsigned(char_row) >= 8) and mode_ttxt = '0' else  
                     not mode_40;
 
-    -- ToDo: Shouldn't this process be sensitive to RST_n/POR_n also?
     gen_video : process (clk_16M00,RST_IN_n)
         variable pixel : std_logic_vector(3 downto 0);
         -- start address of current row block (8-10 lines)
         variable row_addr  : std_logic_vector(14 downto 6);
         -- address within current line
         variable byte_addr : std_logic_vector(14 downto 3);
+        variable txtt_cursor_visible : std_logic;
     begin
         if (RST_IN_n = '0') then
         -- H_COUNT controls the plotting of Pixels so really needs to be aligned to the DRAM VDU Cycles
@@ -766,6 +908,12 @@ begin
           field <= '0';
           hsync_int <= '1';
           vsync_int <= '1';
+          ttxt_cursor <= '0';
+          ttxt_cursor_delay1 <= '0';
+          ttxt_cursor_delay2 <= '0';
+          ttxt_cursor_delay3 <= '0';
+
+          ttxt_cursor_blink <= (others => '0');
 
         elsif rising_edge(clk_16M00) then
 
@@ -793,6 +941,7 @@ begin
 
           if h_count = h_total and v_count = v_total then
             field <= not field;
+            ttxt_cursor_blink <= std_logic_vector(unsigned(ttxt_cursor_blink) + 1);
           end if;
 
           -- Char_row counts 0..7 or 0..9 depending on the mode.
@@ -801,7 +950,7 @@ begin
           if hsync_int = '1' and hsync_int_last = '0'  then
               if v_count = v_total then
                   char_row <= (others => '0');
-              elsif v_count(0) = '1' or true then -- the 'true' here was: "mode(1) = '0'" I've stripped out mode, but don't really know how this works...
+              else
                   if last_line = '1' then
                       char_row <= (others => '0');
                   else
@@ -829,47 +978,109 @@ begin
           -- https://www.mups.co.uk/project/hardware/acorn_electron/
 
           -- At start of the field, update row_addr and byte_addr from the ULA registers 2,3
+          -- For Mode 7 (aka mode_ttxt) then:
+          -- -row_addr(14 downto 6) is actually (11 downto 3)
+          -- -byte_addr(14 downto 3) is actually (11 downto 0) as no lines are added to address
+          -- bit confusing to remap
           if h_count = h_reset_addr and v_count = v_total then
-              row_addr  := screen_base;
-              byte_addr := screen_base & "000";
-          end if;
-
-          -- At the start of hsync,  update the row_addr from byte_addr which
-          -- gets to the start of the next block
-          if hsync_int = '0' and last_line = '1' then
-              row_addr := byte_addr(14 downto 6);
-          end if;
-
-          -- During hsync, reset byte reset back to start of line, unless
-          -- it's the last line
-          if hsync_int = '0' and last_line = '0' then
-              byte_addr := row_addr & "000";
-          end if;
-
-          -- Every 8 or 16 pixels depending on mode/repeats
-          if h_count < h_active then
-              if (mode_40 = '0' and h_count(2 downto 0) = "000") or
-                 (mode_40 = '1' and h_count(3 downto 0) = "1000") then
-                  byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+              if mode_ttxt = '0' then
+                row_addr  := screen_base(14 downto 6);
+                byte_addr := screen_base(14 downto 6) & "000";
+              else 
+                row_addr  := screen_base(11 downto 3);
+                -- TODO: This might cause errors in Mode 7 as will not be able to offset the screen start
+                -- in blocks smaller than 8 characters.
+                byte_addr := screen_base(11 downto 0);
               end if;
           end if;
 
+          -- One the last line of the row, at the end of of h_active scanline, update the row_addr from byte_addr which
+          -- is the start of the next row
+          if h_count = h_active and last_line = '1' then
+              row_addr := byte_addr(14 downto 6);
+          end if;
+
+          -- Byte_address keeps ticking after visible region of scanline but is reset back to start of line just before 
+          -- it's needed for the next active region (at h_count 1016 out of 1023)
+          -- Increment the byte address every 8 or 16 pixels depending on mode/repeats
+            if mode_40 = '0' then
+                if h_count(2 downto 0) = "000" then
+                    if h_count(10 downto 3) = "01111111" then -- At the 
+                        byte_addr := row_addr & "000";
+                    else
+                        byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+                    end if;
+                end if;
+            else
+                if h_count(3 downto 0) = "1000" then
+                    if h_count(10 downto 4) = "0111111" then
+                        byte_addr := row_addr & "000";
+                    else
+                        byte_addr := std_logic_vector(unsigned(byte_addr) + 1);
+                    end if;
+                end if;
+            end if;
+
+          if h_count(3 downto 0) = "1000" then
+            -- Delay the Mode 7 cursor by 2 characters
+                  ttxt_cursor_delay1 <= ttxt_cursor;
+                  ttxt_cursor_delay2 <= ttxt_cursor_delay1;
+          end if;
+          if h_count(3 downto 0) = "0010" then
+            ttxt_cursor_delay3 <= ttxt_cursor_delay2;
+          end if;
+
           -- Handle wrap-around back to mode_base
-          if byte_addr(14 downto 11) = "0000" then
+          -- Unless Mode 7 then we don't care, just leave it to loop as top 5 bits are always 11111 so lowest is 7C00 and highest 7FFF
+          -- Not sure how those 23 characters are delt with...
+          if byte_addr(14 downto 11) = "0000" and mode_ttxt = '0' then
               byte_addr := mode_base & byte_addr(10 downto 3);
           end if;
 
           -- Screen_addr is the final 15-bit Video RAM address
-          screen_addr <= byte_addr & char_row(2 downto 0);
+          if mode_ttxt = '0' then 
+            screen_addr <= byte_addr & char_row(2 downto 0);
+          else 
+            screen_addr <= "11111" & byte_addr(12 downto 3);
+          end if;
 
+          -- Control the cursor blinking/visibility
+          case ttxt_cursor_start(6 downto 5) is
+            when "00" =>
+              txtt_cursor_visible := '1'; -- Always on
+            when "01" =>
+              txtt_cursor_visible := '0'; -- Always off
+            when "10" =>
+              txtt_cursor_visible := ttxt_cursor_blink(4); -- Alternates visibility every 16 fields
+            when "11" => 
+              txtt_cursor_visible := ttxt_cursor_blink(5); -- Alternates visibility every 32 fields
+            when others =>
+              txtt_cursor_visible := '0';
+          end case;
+
+          -- Mode 7 Cursor rendering
+          if byte_addr(12 downto 3) = ttxt_cursor_pos(9 downto 0) and txtt_cursor_visible = '1' and ttxt_lose = '1' and IncludeMode7 = true then
+            -- Bit wasteful using arithmetic, but have to add more controlling signals to do it at start and end so this is
+            -- neater...
+            -- 6845 counts interlaced char line, my ElkULA doesn't, so shifting the start and end down to halve it.
+            if unsigned(char_row) >= unsigned(ttxt_cursor_start(4 downto 1)) and unsigned(char_row) <= unsigned(ttxt_cursor_end(4 downto 1)) then
+              ttxt_cursor <= '1';
+            else 
+              ttxt_cursor <= '0';
+            end if; 
+          else 
+            ttxt_cursor <= '0';
+          end if;
 
           -- Pixels start being plotted on a row at h_count=0 so need to have the 
           -- Screen Data ready for then.
           -- RGB Data
-          if (h_count >= h_active or 
+          if (
+            h_count >= h_active or 
             (mode_text = '0' and v_count >= v_active_gph) or 
             (mode_text = '1' and v_count >= v_active_txt) or 
-            unsigned(char_row) >= 8) then
+            (unsigned(char_row) >= 8 and mode_ttxt = '0')
+            ) then
               -- blanking and border are always black
               red_int   <= '0';
               green_int <= '0';
@@ -1019,18 +1230,21 @@ begin
           end if;
         end if;
 
-      --DEBUG:
-      -- pixel_debug <= pixel;
-      -- start address of current row block (8-10 lines)
-      -- row_addr_debug <= row_addr;
-      -- address within current line
-      -- byte_addr_debug <= byte_addr;
+        --DEBUG:
+        -- pixel_debug <= pixel;
+        -- start address of current row block (8-10 lines)
+        -- row_addr_debug <= row_addr;
+        -- address within current line
+        -- byte_addr_debug <= byte_addr;
 
     end process;
 
-    red   <= red_int;
-    green <= green_int;
-    blue  <= blue_int;
+    red   <=  ttxt_r_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
+              red_int;
+    green <=  ttxt_g_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
+              green_int;
+    blue  <=  ttxt_b_int xor ttxt_cursor_delay3 when mode_ttxt = '1' else
+              blue_int;
     csync <= hsync_int and vsync_int; -- HSync is CSync (Hsync AND VSync) 
     HS_n  <= hsync_int;
 
@@ -1051,9 +1265,22 @@ begin
                   '0';
 
     -- Use Block RAM to serve CPU
+    TurboRAMAccess_M7: if IncludeTurbo and IncludeMode7 generate 
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else      -- 4096 x8 Blocks
+                        '1' when addr(15 downto 11) = "00010" and turbo = '1' else   -- 2024 x4 Blocks
+                        '0';
+    end generate;
+
+    TurboRAMAccess_nM7: if IncludeTurbo and not IncludeMode7 generate 
     turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
                         '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
                         '0';
+    end generate;
+
+    NotTurboRAMAccess: if not IncludeTurbo generate
+    turbo_ram_access <= '0';
+    end generate;
+
 
     clk_gen1 : process(clk_16M00, POR_n)
     begin
@@ -1395,6 +1622,80 @@ begin
 
     ram_we  <= dram_we_int;
     ram_nRW <= not dram_we_int;
+
+    -- 
+    -- Mode 7
+    -- 
+
+    Mode7Included: if IncludeMode7 generate
+
+      -- Generate the 6MHz Dot Clock for Mode 7
+      p_gen_ttxt_clken : process(clk_16M00, RST_IN_n)
+        variable ttxt_clk_count : unsigned(3 downto 0) := (others => '0');
+      begin
+        if RST_IN_n = '0' then
+            ttxt_clk_count := (others => '0');
+            ttxt_clken <= '0';
+        elsif rising_edge(clk_16M00) then
+          ttxt_clken <= not ttxt_clken;
+
+          ---- Reset counter every 8 cycles (0 to 7)
+          if ttxt_clk_count = 7 then
+              ttxt_clk_count := (others => '0');
+          else
+              ttxt_clk_count := ttxt_clk_count + 1;
+          end if;
+
+          ---- Pulse high on 3 specific cycles to spread them out
+          ---- This gives an average frequency of 6MHz
+          if (ttxt_clk_count = 0 or ttxt_clk_count = 3 or ttxt_clk_count = 6) then
+              ttxt_clken <= '1';
+          else
+              ttxt_clken <= '0';
+          end if;
+
+        end if;
+      end process p_gen_ttxt_clken;
+
+      jafa_enable <= '1' when addr = x"fc1c" else
+                     '1' when addr = x"fc1d" else
+                     '1' when addr = x"fc1f" else
+                     '0';
+
+      jafa_do <=  '0' & ttxt_cursor_start             when addr = x"fc1d" and jafa_reg_addr = x"0A" else
+                  "000" & ttxt_cursor_end             when addr = x"fc1d" and jafa_reg_addr = x"0B" else
+                  '0' & screen_base(14 downto 8)      when addr = x"fc1d" and jafa_reg_addr = x"0C" else
+                  screen_base(7 downto 3) & "000"     when addr = x"fc1d" and jafa_reg_addr = x"0D" else
+                  "00" & ttxt_cursor_pos(13 downto 8) when addr = x"fc1d" and jafa_reg_addr = x"0E" else
+                  ttxt_cursor_pos(7 downto 0)         when addr = x"fc1d" and jafa_reg_addr = x"0F" else
+                  "00" & ttxt_dew & "00000"           when addr = x"fc1f" else
+                  (others => '0');
+
+      teletext : entity work.saa5050
+        port map (
+          -- inputs
+          CLOCK    => clk_16M00, --16Mhz
+          CLKEN    => ttxt_clken,--ttxt_clken, --6Mhz
+          nRESET   => RST_IN_n,
+          DI_CLOCK => clk_16M00,
+          DI_CLKEN => '1', --1MHz nah probably not needed?
+          DI       => ttxt_di,
+          GLR      => '0', -- not used
+          DEW      => ttxt_dew, --VSYNC, Resets the Line Counter to 0, this isn't when the ULA sets its char_row to 0 tho...
+          CRS      => ttxt_crs,
+          LOSE     => ttxt_lose, --ttxt_lose looks very wrong - needs to be 0-40 characters on active scanlines
+          -- outputs
+          R        => ttxt_r_int,
+          G        => ttxt_g_int,
+          B        => ttxt_b_int
+        );
+
+      ttxt_di <= screen_data(6 downto 0);
+      ttxt_lose <= '1' when (h_count < h_active) and (v_count < v_active_txt) else '0';
+      ttxt_crs <= field;
+      ttxt_dew <= not vsync_int;
+
+    end generate;
 
 
     -- DEBUGGING FSM STATES

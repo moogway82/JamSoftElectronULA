@@ -4,7 +4,7 @@ A project to replace the original Acorn Electron ULA with a ice40 based FPGA boa
 
 ![Nice shot of the JamSoftElectronULA board](Photos/JamSoftElectronULA-v30-sitting-nicely.jpg "The JamSoftElectronULA board")
 
-This is a no-frills* ULA replacement meaning that it just replicates the stock Acorn Electron ULA without adding new features. It requires the standard Electron DRAM, ROM and CPU and other components to be present and working as a normal ULA would.
+This is a low-frills* ULA replacement meaning that it just replicates the stock Acorn Electron ULA without adding new features. It requires the standard Electron DRAM, ROM and CPU and other components to be present and working as a normal ULA would.
 
 Features:
 
@@ -64,16 +64,30 @@ I've also sunk about as much time and money into this project as I wish to at pr
 
 [Some of the development history on Stardot Forums](https://stardot.org.uk/forums/viewtopic.php?t=26929)
 
-## * Well, 1 Frill, actually...
+## * Ah we appear to have, 2 Frills now...
 
-The 1 'frill' with the current version is a simple Turbo mode which can be enabled using the key combo Ctrl + Caps + 2. The turbo mode uses the 8KB of embedded Block RAM on the FPGA as fast, 2MHz CPU clock & un-contended RAM which replaces the lower 8K of memory from the slower DRAM and provides a decent speed boost, especially in Modes 0-3 where the CPU is usually halted when trying to access RAM duing an active scanline. Normal speed is resumed as soon as a Break is issued. This almost gets the Elk up to BBC B speeds on the ClockSp benchmark. Many thanks to the [Ramtop-Retro's OSTC project](https://github.com/ramtop-retro/ostc) for providing the inspiration here.
+I had originally intended this to be the no-frills ULA replacement, but curiousity killed the cat, so we now have two 'frills' with the current version: a simple Turbo mode which can be enabled using the key combo Ctrl + Caps + 2 and a Mode 7 implementation.
 
-Ideas for future 'Frills' could be:
+### Turbo Mode
+
+The turbo mode uses the 8KB (or 6KB with Mode 7 support) of embedded Block RAM on the FPGA as fast, 2MHz CPU clock & un-contended RAM which replaces the lower 8KB/6KB of memory from the slower DRAM and provides a decent speed boost, especially in Modes 0-3 where the CPU is usually halted when trying to access RAM duing an active scanline. Normal speed is resumed as soon as a Break is issued. This almost gets the Elk up to BBC B speeds on the ClockSp benchmark. Many thanks to the [Ramtop-Retro's OSTC project](https://github.com/ramtop-retro/ostc) for providing the inspiration here.
+
+### Mode 7 Support
+
+This is a 6845-core-less text-only mode which provides BBC style Mode 7 compatibility. It has a SAA5050 implementation so the character generation is fairly accurate with all the graphics and modifier characters implemented with good compatibility on testing. Main limitation is the lack of character rounding so this is more blocky than the we're used to with the Beeb, but it does allow only 1KB of video RAM required. It's currently working with the Jaffa ROM v191 and the new v193 (available [here](https://stardot.org.uk/forums/viewtopic.php?t=33270)). I'm currently working on an updated Electron MOS which adds a Mode 7 support without the need of an additional ROM, still WIP...
+
+It's disabled in the code base by default, to enable Mode 7 support, edit the JamSoftElectronULA.vhd file generic at the top to:
+```
+IncludeMode7  : boolean := true;
+```
+
+### Ideas for making it even more frilly:
 
 - Add MMFS and connect an SD-Card to the FPGA programming pins
 - Connect a NES joypad to the Programming pins
-- Mode 7 support
+- Font smoothing for Mode 7
 - Multiple ROM support 
+- 8-bit DRAM bus
 - ...whatever you can think of, the code's all here, knock yourself out!
 
 If you're looking for a more advanced ULA replacement with more upgrade options, I would highly recommend [budgie's ElectronULA project](https://github.com/EquasysIT/ElectronULA) which uses a Intel Max 10 FPGA and features SD-Card/MMFS, 2MHz/4MHz turbo modes, Mode 7 emulation, VGA output and more.

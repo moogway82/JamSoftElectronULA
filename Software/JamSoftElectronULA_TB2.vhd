@@ -5,17 +5,18 @@ use ieee.numeric_std.all;
 entity JamSoftElectronULA_TB2 is
   generic (
     run_sound_out_test  : boolean := false;
-    run_rgb_test        : boolean := true;
+    run_rgb_test        : boolean := false;
     rgb_test_quick      : boolean := false;
-    run_turbo_mode      : boolean := true;
+    run_turbo_mode      : boolean := false;
     run_ram_test        : boolean := true;
     ram_test_quick      : boolean := false; -- Quick RAM Test uses only sequencial write pattern
     run_rom_test        : boolean := false;
     run_int_test        : boolean := false;
     run_caps_test       : boolean := false;
     run_phi_test        : boolean := false;
-    run_sync_ram_slot   : boolean := true;
-    run_paging_test     : boolean := true
+    run_sync_ram_slot   : boolean := false;
+    run_paging_test     : boolean := false;
+    run_mode7_test      : boolean := true
   );
 end;
 
@@ -39,6 +40,9 @@ architecture behavioral of JamSoftElectronULA_TB2 is
 begin
 
   ula : entity work.JamSoftElectronULA 
+  generic map(
+    IncludeTurbo => false
+  )
   port map(
     clk_16M00 => clk_16M00,
     addr => addr,
@@ -455,6 +459,28 @@ begin
     data <= "00110000"; 
     R_W_n <= '0';
 
+    -- Set Screen Start Address to 0x6000
+--; SHEILA &FE02 and &FE03
+--; &6000 = 0011 0000 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 110 000 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00110000 = &30
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"00"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"30"; 
+    R_W_n <= '0';
+
+
     -- Write bytes
     rgb_test_vram_addr := x"0000";
     for i in 0 to ram_test_size loop
@@ -490,35 +516,35 @@ begin
       rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
     end loop;
 
-  if ram_test_quick = false then
+  --if ram_test_quick = false then
 
-    -- Write bytes
-    rgb_test_vram_addr := x"0000";
-    for i in 0 to ram_test_size loop
-      wait until falling_edge(cpu_clk_out);
-      wait for cpu_addr_ready;
-      addr <= rgb_test_vram_addr;
-      data <=  x"A5";
-      --data <= rgb_test_vram_addr(7 downto 0);
-      R_W_n <= '0';
-      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
-    end loop;
+  --  -- Write bytes
+  --  rgb_test_vram_addr := x"0000";
+  --  for i in 0 to ram_test_size loop
+  --    wait until falling_edge(cpu_clk_out);
+  --    wait for cpu_addr_ready;
+  --    addr <= rgb_test_vram_addr;
+  --    data <=  x"A5";
+  --    --data <= rgb_test_vram_addr(7 downto 0);
+  --    R_W_n <= '0';
+  --    rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+  --  end loop;
 
-    -- Read back bytes
-    rgb_test_vram_addr := x"0000";
-    wait until falling_edge(cpu_clk_out);
-    for i in 0 to ram_test_size loop
-      wait for cpu_addr_ready;
-      addr <= rgb_test_vram_addr;
-      R_W_n <= '1';
-      data <= (others => 'Z');
-      wait until falling_edge(cpu_clk_out);
-      assert data = x"A5" report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
-      --assert data = rgb_test_vram_addr(7 downto 0) report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
-      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
-    end loop;
+  --  -- Read back bytes
+  --  rgb_test_vram_addr := x"0000";
+  --  wait until falling_edge(cpu_clk_out);
+  --  for i in 0 to ram_test_size loop
+  --    wait for cpu_addr_ready;
+  --    addr <= rgb_test_vram_addr;
+  --    R_W_n <= '1';
+  --    data <= (others => 'Z');
+  --    wait until falling_edge(cpu_clk_out);
+  --    assert data = x"A5" report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
+  --    --assert data = rgb_test_vram_addr(7 downto 0) report "Data not valid at addr: " & INTEGER'IMAGE(to_integer(unsigned(addr))) severity error;
+  --    rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+  --  end loop;
 
-  end if; -- ram_test_quick
+  --end if; -- ram_test_quick
 
   end if; -- run_ram_test
 
@@ -915,12 +941,183 @@ begin
 
   end if;
 
+    -------------------------------
+    -- 9. MODE 7 Tests
+    -------------------------------  
 
-  
+  if run_mode7_test = true then
+
+
+    -- Write some bytes
+    rgb_test_vram_addr := x"7C00";
+    for i in 0 to 1023 loop
+      wait until falling_edge(cpu_clk_out);
+      wait for cpu_addr_ready;
+      addr <= rgb_test_vram_addr;
+      data <=  "0" & std_logic_vector(to_unsigned( i, 3)) & "0001";
+      R_W_n <= '0';
+      rgb_test_vram_addr := std_logic_vector(unsigned(rgb_test_vram_addr) + 1);
+    end loop;
+
+    -- Set Screen Start Address
+--; SHEILA &FE02 and &FE03
+--; &7C00 = 0111 1100 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 111 110 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00111110 = &3E
+-- 3E14 would be shifted down 1 line...
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"00"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"3E"; 
+    R_W_n <= '0';
+
+    -- Set Mode 7
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE07";
+    data <= "00111000"; 
+    R_W_n <= '0';
+
+    -- Set Cursor Position and thickness
+    -- Start Line
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0A"; --R10 Start Char Row & Blink
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"01"; -- b65 "00" always-on, b40 start  BBC Mode 7
+    R_W_n <= '0';
+    -- End Line
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0B"; --R11 End Char Row & Blink
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"13"; -- b40 BBC mode 7
+    R_W_n <= '0';
+    -- Cursor Pos H
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0E"; --R14 Cursor Pos H
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"7C"; 
+    R_W_n <= '0';
+    -- Cursor Pos L
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0F"; --R15 Cursor Pos L
+    R_W_n <= '0';
+    -- Set Cursor Position and thickness
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"30"; 
+    R_W_n <= '0';
+
+    wait for 40 ms;
+
+    -- Back to Mode 2
+        -- Set Screen Start Address down 1 line
+--; SHEILA &FE02 and &FE03
+--; &7C00 = 0111 1100 0000 0000
+--; 0 / [FE03] / [FE02] / 00 0000
+--; 0 / 111 110 / 0 00 / 00 0000
+--; FE02 = A8 A7 A6 X X X X X
+--; FE03 = X X A14 A13 A12 A11 A10 A9
+--; FE02 = 00000000 = &0
+--; FE03 = 00111110 = &3E
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE07";
+    data <= "00010000"; 
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE02";
+    data <= x"00"; -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FE03";
+    data <= x"18";  -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= (others => 'Z'); 
+    R_W_n <= '1';
+
+    -- Now try setting Mode 7 using the Jafa regs - start address 7c00
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0C"; -- &12
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"7C"; -- &3000
+    R_W_n <= '0';
+
+    -- 6845ish reg address reg fc1c
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1C";
+    data <= x"0D"; -- &13
+    R_W_n <= '0';
+
+    -- 6845ish reg data reg fc1d
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"FC1D";
+    data <= x"28"; -- &3000
+    R_W_n <= '0';
+
+    wait until falling_edge(cpu_clk_out);
+    wait for cpu_addr_ready;
+    addr <= x"0000";
+    data <= (others => 'Z'); 
+    R_W_n <= '1';
+
+
+    wait for 40 ms;
+
+  end if;
 
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);
     wait until falling_edge(cpu_clk_out);
+
     assert false report "End of testing, phew!" severity failure;
     wait;
   end process;

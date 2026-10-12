@@ -96,7 +96,7 @@ begin
 
   --  Unsyntesisable process to just populate the RAM
   fill_ram : process 
-    variable test_data : unsigned(3 downto 0) := "0000";
+    variable test_data : unsigned(3 downto 0) := "1010";
   begin
     for i in 0 to 65535 loop
       RAM(i) := std_logic_vector(test_data);

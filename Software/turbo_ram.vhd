@@ -5,7 +5,8 @@ use IEEE.numeric_std.all;
 entity turbo_ram is
   generic (
     addr_width : natural := 13;--8192x8
-    data_width : natural := 8
+    data_width : natural := 8;
+    ram_size   : natural := 2** 13
   );
   port (
     addr : in std_logic_vector (addr_width - 1 downto 0);
@@ -18,7 +19,7 @@ entity turbo_ram is
   end turbo_ram;
 
   architecture rtl of turbo_ram is
-    type mem_type is array ((2** addr_width) - 1 downto 0) of
+    type mem_type is array ((ram_size) - 1 downto 0) of
       std_logic_vector(data_width - 1 downto 0);
     signal mem : mem_type;
 
