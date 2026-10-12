@@ -19,7 +19,11 @@ use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
     generic (
-        IncludeMode7  : boolean := true;
+        -- Target FPGA Chip:
+        --   0 = ICE40HX1K - the original tiny little wonder
+        --   1 = ICE40HX4K - bigger daddy of the 1K, and it's *actually* an 8K so even bigger!
+        TargetFPGA    : integer := 1;
+        IncludeMode7  : boolean := false;
         IncludeTurbo  : boolean := true
     );
     port (
@@ -307,7 +311,7 @@ begin
     not_cpu_clk <= not cpu_clk;
 
     -- Using some of the BRAM for SAA5050 Character ROM
-    TurboIncluded_M7: if IncludeTurbo and IncludeMode7 generate 
+    TurboIncluded_1K_M7: if IncludeTurbo and IncludeMode7 and TargetFPGA = 0 generate 
       -- Turbo RAM using 6K Block RAM on FPGA
       ula : entity work.turbo_ram 
       generic map (
@@ -323,12 +327,48 @@ begin
       );
     end generate;
 
-    -- All of the BRAM can be used for TURBO
-    TurboIncluded_nM7: if IncludeTurbo and not IncludeMode7 generate 
+    -- Using some of the BRAM for SAA5050 Character ROM
+    TurboIncluded_4K_M7: if IncludeTurbo and IncludeMode7 and TargetFPGA = 1 generate 
+      -- Turbo RAM using 14K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      generic map (
+        addr_width => 14,
+        ram_size => 14336
+      )
+      port map(
+          addr => addr(13 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
+
+    -- All of the HX1K BRAM can be used for TURBO
+    TurboIncluded_1K_nM7: if IncludeTurbo and not IncludeMode7 and TargetFPGA = 0 generate 
       -- Turbo RAM using 8K Block RAM on FPGA
       ula : entity work.turbo_ram 
       port map(
           addr => addr(12 downto 0),
+          write_en => turbo_we,
+          wclk => not_cpu_clk,
+          rclk => cpu_clk,
+          din => data_in,
+          dout => block_ram_data
+      );
+    end generate;
+
+    -- All of the HX4K BRAM can be used for TURBO
+    TurboIncluded_4K_nM7: if IncludeTurbo and not IncludeMode7 and TargetFPGA = 1 generate 
+      -- Turbo RAM using 16K Block RAM on FPGA
+      ula : entity work.turbo_ram 
+      generic map (
+        addr_width => 14,
+        ram_size => 16384
+      )
+      port map(
+          addr => addr(13 downto 0),
           write_en => turbo_we,
           wclk => not_cpu_clk,
           rclk => cpu_clk,
@@ -1265,15 +1305,31 @@ begin
                   '0';
 
     -- Use Block RAM to serve CPU
-    TurboRAMAccess_M7: if IncludeTurbo and IncludeMode7 generate 
+    TurboRAMAccess_1K_M7: if IncludeTurbo and IncludeMode7 and TargetFPGA = 0 generate 
     turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else      -- 4096 x8 Blocks
                         '1' when addr(15 downto 11) = "00010" and turbo = '1' else   -- 2024 x4 Blocks
                         '0';
     end generate;
 
-    TurboRAMAccess_nM7: if IncludeTurbo and not IncludeMode7 generate 
+    TurboRAMAccess_4K_M7: if IncludeTurbo and IncludeMode7 and TargetFPGA = 1 generate 
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else      -- 4096 x8 Blocks
+                        '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
+                        '1' when addr(15 downto 12) = x"2" and turbo = '1' else 
+                        '1' when addr(15 downto 11) = "00110" and turbo = '1' else   -- 2024 x4 Blocks
+                        '0';
+    end generate;
+
+    TurboRAMAccess_1K_nM7: if IncludeTurbo and not IncludeMode7 and TargetFPGA = 0 generate 
     turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
                         '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
+                        '0';
+    end generate;
+
+    TurboRAMAccess_4K_nM7: if IncludeTurbo and not IncludeMode7 and TargetFPGA = 1 generate 
+    turbo_ram_access <= '1' when addr(15 downto 12) = x"0" and turbo = '1' else
+                        '1' when addr(15 downto 12) = x"1" and turbo = '1' else 
+                        '1' when addr(15 downto 12) = x"2" and turbo = '1' else 
+                        '1' when addr(15 downto 12) = x"3" and turbo = '1' else 
                         '0';
     end generate;
 
