@@ -19,7 +19,7 @@ use ieee.numeric_std.all;
 
 entity JamSoftElectronULA is
     generic (
-        IncludeMode7  : boolean := false;
+        IncludeMode7  : boolean := true;
         IncludeTurbo  : boolean := true
     );
     port (

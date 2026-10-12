@@ -1,0 +1,74 @@
+### Clock
+set_io 	clk_16M00   	E10
+
+### Reset
+set_io 	RST_IN_n     	B3
+set_io	RST_OUT_n 		A2
+
+### ULA Signals
+set_io 	addr[0]     	D1
+set_io 	addr[1]     	C1
+set_io 	addr[2]     	E1
+set_io 	addr[3]     	L4
+set_io 	addr[4]     	L3
+set_io 	addr[5]     	K3
+set_io 	addr[6]     	L2
+set_io 	addr[7]     	F2
+set_io 	addr[8]     	C2
+set_io 	addr[9]     	L5
+set_io 	addr[10]     	K5
+set_io 	addr[11]     	K4
+set_io 	addr[12]     	E2
+set_io 	addr[13]     	F1
+set_io 	addr[14]     	D2
+set_io 	addr[15]     	D9
+
+set_io 	data[0]     	J10
+set_io 	data[1]     	J11
+set_io 	data[2]     	H10
+set_io 	data[3]     	H11
+set_io 	data[4]     	G10
+set_io 	data[5]     	G11
+set_io 	data[6]     	F10
+set_io 	data[7]     	F11
+set_io 	data_en_n 		K11
+
+set_io	R_W_n			D10
+set_io 	POR_n 			C11
+set_io	IRQ_n			B2
+set_io	dram_data[0]	K7
+set_io	dram_data[1]	L7
+set_io	dram_data[2] 	J4
+set_io	dram_data[3]	J7
+set_io	dram_addr[0]	B4
+set_io	dram_addr[1]	A4
+set_io	dram_addr[2]	K2
+set_io	dram_addr[3]	G1
+set_io	dram_addr[4]	K1
+set_io	dram_addr[5]	J2
+set_io	dram_addr[6]	J1
+set_io	dram_addr[7]	H2
+set_io	ras_n			A9
+set_io	cas_n			B9
+set_io	ram_we			A3
+set_io  ram_nRW			L1
+set_io	ROM_n			B8
+
+set_io	red 			G2
+set_io	green 			H1
+set_io	blue 			A5
+set_io	csync 			B6
+set_io  HS_n 			B5
+set_io  sound 			A7
+set_io  kbd[0] 			K6
+set_io  kbd[1]			E11
+set_io  kbd[2]			E9
+set_io  kbd[3]			D11
+set_io	casIn			B11
+set_io	casOut			A10
+set_io	caps			B7
+set_io	motor			A6
+set_io	cpu_clk_out		A8
+
+set_io	testing_pin		B1
+
