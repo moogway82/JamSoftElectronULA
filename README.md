@@ -74,7 +74,8 @@ The turbo mode uses the 8KB (or 6KB with Mode 7 support) of embedded Block RAM o
 
 ### Mode 7 Support
 
-This is a 6845-core-less text-only mode which provides BBC style Mode 7 compatibility. It has a SAA5050 implementation so the character generation is fairly accurate with all the graphics and modifier characters implemented with good compatibility on testing. Main limitation is the lack of character rounding so this is more blocky than the we're used to with the Beeb, but it does allow only 1KB of video RAM required. It's currently working with the Jaffa ROM v191 and the new v193 (available [here](https://stardot.org.uk/forums/viewtopic.php?t=33270)). I'm currently working on an updated Electron MOS which adds a Mode 7 support without the need of an additional ROM, still WIP...
+This is a 6845-core-less text-only mode which provides BBC style Mode 7 compatibility. It has a SAA5050 implementation so the character generation is fairly accurate with all the graphics and modifier characters implemented with good compatibility on testing. Main limitation is the lack of character rounding so this is more blocky than the we're used to with the Beeb, but it does allow only 1KB of video RAM required. It's currently working with the Jaffa ROM v191 and the new v193 (available [here](https://stardot.org.uk/forums/viewtopic.php?t=33270)). There is now also an WIP version of the MOS, version 1.07, 
+which can replace the Electrons ROM chip to allow Mode 7 to work without requiring an additional ROM, which you can get from [here](https://github.com/moogway82/electron_os_disassembly).
 
 It's disabled in the code base by default, to enable Mode 7 support, edit the JamSoftElectronULA.vhd file generic at the top to:
 ```
